@@ -314,7 +314,7 @@ elif [ $STEP -eq 1 ]; then
 
     TEMP_SAMPLE_ARRAY=( ${SAMPLE_ARRAY[@]:$(($TEMP_ARRAY_START - 1)):$TEMP_ARRAY_INCREMENT} )
     TEMP_JOB_COUNT=${#TEMP_SAMPLE_ARRAY[@]}
-    echo "Submitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
+    echo -e "$(date)\nSubmitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
@@ -325,7 +325,7 @@ elif [ $STEP -eq 1 ]; then
         $FASTQ_DIR $RESULTS_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
         $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
-    echo -e "\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT\n" >> $PIPELINE_STATUS
+    echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#SAMPLE_ARRAY[@]} ]; then
         echo -e "\nsbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
@@ -363,7 +363,7 @@ elif [ $STEP -eq 2 ]; then
     
     TEMP_SAMPLE_ARRAY=( ${SAMPLE_ARRAY[@]:$(($TEMP_ARRAY_START - 1)):$TEMP_ARRAY_INCREMENT} )
     TEMP_JOB_COUNT=${#TEMP_SAMPLE_ARRAY[@]}
-    echo "Submitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
+    echo -e "$(date)\nSubmitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
@@ -376,7 +376,7 @@ elif [ $STEP -eq 2 ]; then
         $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $ALIGN_MINIMUM $TOOLS_DIR $SCRIPT_DIR $PROJECT \
         $MIN_KRAKEN_READS $SUBSPECIES $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
-    echo -e "\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT\n" >> $PIPELINE_STATUS
+    echo -e "New start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#FASTQ_ARRAY[@]} ]; then
         echo -e "\nsbatch --dependency=afterany:$( IFS=$':'; echo "${DEPENDENCIES[*]}" ) -J $PROJECT \

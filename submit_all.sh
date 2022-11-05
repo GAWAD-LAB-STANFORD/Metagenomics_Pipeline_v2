@@ -346,7 +346,7 @@ elif [ $STEP -eq 2 ]; then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
         SAMPLE_COUNT=1
         for SAMPLE in ${SAMPLE_ARRAY[@]}; do
-            if [ ! -d ${SAMPLE}_ref_filtered.bam ]; then
+            if [ ! -f ${SAMPLE}_ref_filtered.bam ]; then
                 echo "Sample number $SAMPLE_COUNT - ${SAMPLE}_ref_filtered.bam not found. Exiting with code 1" >> $PIPELINE_STATUS
                 echo "END: $(date)" >> $PIPELINE_STATUS
                 exit 1

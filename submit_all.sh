@@ -205,7 +205,7 @@ if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
     if [ -z $FASTQ_DIR ]; then
         echo "Option: No fastqs to process" >> $PIPELINE_STATUS
     else
-        echo "Option: Fastq dir: $FASTQ_DIR"
+        echo "Option: Fastq dir: $FASTQ_DIR" >> $PIPELINE_STATUS
     fi
     if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
         echo "Option: Skip trimming - will not run trimmomatic" >> $PIPELINE_STATUS

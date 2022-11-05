@@ -1,0 +1,29 @@
+suppressPackageStartupMessages({
+  library(tidyverse)
+})
+
+
+args <- commandArgs(trailingOnly = TRUE) 
+blast_tsv <- args[1]
+align_minimum <- as.double(args[2])
+
+
+column_names <- colnames(df)
+df <- read_tsv(blast_tsv)
+tryCatch({
+  df <- df %>%
+    filter(percent_aligned >= align_minimum) %>%
+    filter(hit_taxid == kraken_species_id) %>%
+    group_by(query, accession) %>%
+      mutate(max_read_pair_length = max(hit_to, hit_from) - min(hit_to, hit_from)) %>%
+      filter(length(unique(read)) == 2) %>%
+    ungroup()
+  df <- df[!duplicated(df[c("query", "blast_species")]),]
+  cat(nrow(df), "blast results after filtering\n")
+  write_tsv(df, blast_tsv)
+}, error = function(err) {
+  df <- data.frame(matrix(ncol = length(column_names), nrow = 0))
+  colnames(df) <- column_names
+  cat(nrow(df), "blast results after filtering\n")
+  write_tsv(df, blast_tsv)
+})

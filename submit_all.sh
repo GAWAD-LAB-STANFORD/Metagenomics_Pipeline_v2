@@ -28,8 +28,6 @@ Run after demultiplexing: \n\t\
     sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/MRD_project/ --project MRD_project \n\n\
 Run with demultiplexing: \n\t\
     sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/191126_MN01236_0003_A000H2WWHT --fastq_dir /oak/stanford/groups/cgawad/MRD_project/ --project MRD_project \n\n\
-Run with demultiplexing, wait 12 hours before starting, and email notification when analysis begins and ends: \n\t\
-    sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/191126_MN01236_0003_A000H2WWHT --fastq_dir /oak/stanford/groups/cgawad/MRD_project/ --project MRD_project --slurm --begin=now+12hours --mail-type=ALL \n\n\
 For more information, read the README.md"
 
 # Reads in command line option arguments and assigns them to variables

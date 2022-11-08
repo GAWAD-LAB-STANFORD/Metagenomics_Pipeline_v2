@@ -467,7 +467,7 @@ elif [ $STEP -eq 3 ]; then
     
     
     # echo "### Processing consolidated results and making figures ### - START: $(date)" >> $PIPELINE_STATUS
-    # ml R/4.0.2
+    # ml R/4.2.0
     # export R_LIBS="/home/groups/cgawad/R_LIBS"
     # Rscript ${SCRIPT_DIR}/analyze_and_plot_results.R \
     #     --project $PROJECT --identify $IDENTIFY \

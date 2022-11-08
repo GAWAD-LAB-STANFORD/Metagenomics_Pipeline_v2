@@ -27,7 +27,7 @@ SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 echo -e "START: $(date)\nMetagenomics pipeline\nResults dir: $RESULTS_DIR\nSample: $SAMPLE"
 cd $RESULTS_DIR
 
-ml java perl R/4.0.2 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
+ml java perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
 ml biology bwa samtools gatk
 export R_LIBS="/home/groups/cgawad/R_LIBS"
 export PATH=${TOOLS_DIR}/kraken2-2.0.8-beta:$PATH

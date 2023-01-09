@@ -21,7 +21,7 @@ SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 echo -e "START: $(date)\nMetagenomics pipeline\nFastq dir: $FASTQ_DIR\nResults dir: $RESULTS_DIR\nSample: $SAMPLE"
 cd $RESULTS_DIR
 
-ml java perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
+ml java/11.0.11 perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
 ml biology bwa samtools gatk
 export R_LIBS="/home/groups/cgawad/R_LIBS"
 

@@ -275,6 +275,10 @@ if [ $STEP -ne 0 ]; then
             R1_SUFFIX="_R1_001.fastq.gz"
             R2_SUFFIX="_R2_001.fastq.gz"
         fi
+        if [ $(find ${FASTQ_DIR} -maxdepth 1 -name "*${R1_SUFFIX}" | wc -l) -eq 0 ]; then
+            R1_SUFFIX="_R1.fastq.gz"
+            R2_SUFFIX="_R2.fastq.gz"
+        fi
     fi
     SAMPLE_ARRAY=( $(find $TEST_FASTQ_DIR -maxdepth 1 -name "*${R1_SUFFIX}" -exec basename {} \; | \
         grep -v "Undetermined" | sed "s/${R1_SUFFIX}//") )

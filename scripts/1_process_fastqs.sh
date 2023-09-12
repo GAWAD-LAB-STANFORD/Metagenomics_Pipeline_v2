@@ -31,10 +31,10 @@ R2_FASTQ=${FASTQ_DIR}/${SAMPLE}${R2_SUFFIX}
 if [ $SKIP_TRIMMOMATIC -eq 0 ]; then
     UNTRIMMED_R1_FASTQ=$R1_FASTQ
     UNTRIMMED_R2_FASTQ=$R2_FASTQ
-    R1_FASTQ=$(echo ${SAMPLE}${R1_SUFFIX} | sed "s/_R1_/_R1_trimmed_/")
-    R2_FASTQ=$(echo ${SAMPLE}${R2_SUFFIX} | sed "s/_R2_/_R2_trimmed_/")
-    UNPAIRED_R1_FASTQ=$(echo ${SAMPLE}${R1_SUFFIX} | sed "s/_R1_/_R1_trimmed_unpaired_/")
-    UNPAIRED_R2_FASTQ=$(echo ${SAMPLE}${R2_SUFFIX} | sed "s/_R2_/_R2_trimmed_unpaired_/")
+    R1_FASTQ=$(echo ${SAMPLE}${R1_SUFFIX} | sed "s/_R1/_R1_trimmed/")
+    R2_FASTQ=$(echo ${SAMPLE}${R2_SUFFIX} | sed "s/_R2/_R2_trimmed/")
+    UNPAIRED_R1_FASTQ=$(echo ${SAMPLE}${R1_SUFFIX} | sed "s/_R1/_R1_trimmed_unpaired/")
+    UNPAIRED_R2_FASTQ=$(echo ${SAMPLE}${R2_SUFFIX} | sed "s/_R2/_R2_trimmed_unpaired/")
     
     echo "### Trimming fastqs ### - START: $(date)"
     java -jar ${TOOLS_DIR}/Trimmomatic-0.35/trimmomatic-0.35.jar PE -phred33 -trimlog \
@@ -73,14 +73,14 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
         -R $REF_FASTA -I ${SAMPLE}_${REF_NAME}_aligned.bam -O ${SAMPLE}_${REF_NAME}_alignment_metrics.tsv
     echo "### Collecting $REF_NAME alignment metrics ### - END: $(date)"
     
-    echo "### Filtering unaligned reads from $REF_NAME into a new BAM ### - START: $(date)"
+    echo "### Filtering unmapped reads from $REF_NAME into a new BAM ### - START: $(date)"
     samtools view -b -f 4 ${SAMPLE}_${REF_NAME}_aligned.bam > ${SAMPLE}_no_${REF_NAME}.bam
-    echo "### Filtering unaligned reads from $REF_NAME into a new BAM ### - END: $(date)"
+    echo "### Filtering unmapped reads from $REF_NAME into a new BAM ### - END: $(date)"
     
-    echo "### Converting unaligned reads from $REF_NAME from BAM to fastq ### - START: $(date)"
+    echo "### Converting unmapped reads from $REF_NAME from BAM to fastq ### - START: $(date)"
     gatk --java-options "-XX:+UseParallelGC -XX:ParallelGCThreads=2 -Xmx32g" SamToFastq -I ${SAMPLE}_no_${REF_NAME}.bam \
         -F ${SAMPLE}_no_${REF_NAME}${R1_SUFFIX} -F2 ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX} --VALIDATION_STRINGENCY SILENT
-    echo "### Converting unaligned reads from $REF_NAME from BAM to fastq ### - START: $(date)"
+    echo "### Converting unmapped reads from $REF_NAME from BAM to fastq ### - START: $(date)"
     
     PREV_R1_FASTQ=${SAMPLE}_no_${REF_NAME}${R1_SUFFIX}
     PREV_R2_FASTQ=${SAMPLE}_no_${REF_NAME}${R2_SUFFIX}

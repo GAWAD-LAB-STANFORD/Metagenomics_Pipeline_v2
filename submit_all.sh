@@ -12,25 +12,36 @@ HELP="\
 Purpose: \n\t\
     This pipeline is built to identify metagenomic species from pair-end fastq.gz files and remove human contamination \n\n\
 Required arguments: -p/--project <arg> and either -f/--fastq_dir <arg> or -r/--results_dir <arg> \n\
-Optional arguments: -b/--run_dir <arg>, --sample_sheet <arg>, --R1_suffix <arg>, --R2_suffix <arg>, --err_out_dir <arg>, --skip_trimming, --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, --subspecies, --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
+Optional arguments: -b/--run_dir <arg>, --err_out_dir <arg>, --scratch_dir <arg>, --sample_sheet <arg>, \n\t\
+    --R1_suffix <arg>, --R2_suffix <arg>, --skip_scratch, --skip_trimming, \n\t\
+    --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, --subspecies, \n\t\
+    --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
 Defaults: \n\t\
     If no fastq_dir specified, uses results_dir \n\t\
     If no results_dir specified, makes new directory in fastq_dir \n\t\
+    scratch_dir: /scratch/groups/cgawad/date_project_Scratch \n\t\
     sample_sheet: SampleSheet.csv \n\t\
-    R1_suffix: _L001_R1_001.fastq.gz or _R1_001.fastq.gz \n\t\
-    R2_suffix: _L001_R2_001.fastq.gz or _R1_001.fastq.gz \n\t\
+    R1_suffix: _L001_R1_001.fastq.gz or _R1_001.fastq.gz or _R1.fastq.gz \n\t\
+    R2_suffix: _L001_R2_001.fastq.gz or _R1_001.fastq.gz or _R1.fastq.gz \n\t\
     kraken_db_types: microbial \n\t\
     min_kraken_reads: 10 \n\t\
     blast_db_types: nt \n\t\
     num_alignments: 250 \n\t\
     align_min: 90 \n\n\
-Run after demultiplexing: \n\t\
-    sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/MRD_project/ --project MRD_project \n\n\
-Run with demultiplexing: \n\t\
-    sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/191126_MN01236_0003_A000H2WWHT --fastq_dir /oak/stanford/groups/cgawad/MRD_project/ --project MRD_project \n\n\
+Run after demultiplexing and fastq directory: \n\t\
+    sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --project 2020-01-01_Project \n\n\
+Run after demultiplexing and results directory: \n\t\
+    sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --results_dir /oak/stanford/groups/cgawad/2020-01-01_Results/ --project 2020-01-01_Project \n\n\
+Run with demultiplexing and fastq directory: \n\t\
+    sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/2020-01-01_BCLs --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --project 2020-01-01_Project \n\n\
+Run with demultiplexing and results directory: \n\t\
+    sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/2020-01-01_BCLs --results_dir /oak/stanford/groups/cgawad/2020-01-01_Results/ --project 2020-01-01_Project \n\n\
+Run with demultiplexing, fastq directory, and results directory: \n\t\
+    sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/2020-01-01_BCLs --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --results_dir /oak/stanford/groups/cgawad/2020-01-01_Results/ --project 2020-01-01_Project \n\n\
 For more information, read the README.md"
 
 # Reads in command line option arguments and assigns them to variables
+SKIP_SCRATCH=0
 SKIP_TRIMMOMATIC=0
 FILTER_RHESUS=1
 KRAKEN_DB_TYPES="microbial-plasmid-viral"
@@ -73,6 +84,11 @@ while [ "$1" != "" ]; do
                                 ;;
         -d | --pipeline_dir )   shift
                                 PIPELINE_DIR=$1
+                                ;;
+        -s | --scratch_dir )    shift
+                                SCRATCH_DIR=$1
+                                ;;
+        --skip_scratch )        SKIP_SCRATCH=1
                                 ;;
         --skip_trimming )       SKIP_TRIMMOMATIC=1
                                 ;;
@@ -122,7 +138,7 @@ KRAKEN_DB_DIR_PREFIX="/oak/stanford/groups/cgawad/Reference_Files/Kraken2_Fatfre
 NCBI_DB_DIR_PREFIX="/oak/stanford/groups/cgawad/Reference_Files/NCBI_RefSeq_Databases/ncbi_database_"
 NCBI_ANNOTATIONS_DIR="/oak/stanford/groups/cgawad/Reference_Files/NCBI_Annotations"
 
-# Ensure we have the requires variables set and set other variables
+# Ensure we have the required variables set and set other variables
 if ([ -z $FASTQ_DIR ] && [ -z $RESULTS_DIR ]) || [ -z $PROJECT ] || [ -z $PIPELINE_DIR ]; then
     echo "Variables not supplied correctly. Use -h/--help options for assistance. Ending program..."
     exit 1
@@ -132,20 +148,33 @@ if [ -z $FASTQ_DIR ] && [ $STEP -eq 0 ]; then
 elif [ -z $RESULTS_DIR ]; then
     RESULTS_DIR="${FASTQ_DIR}/$(date '+%Y-%m-%d')_${PROJECT}_Results"
 fi
+if [ ! -z $SCRATCH_DIR ] && [ $SKIP_SCRATCH -eq 1 ]; then
+    echo "Variables not supplied correctly. Cannot skip scratch while being provided scratch_dir for use. Exiting with code 1"
+    exit 1
+fi
+if [ -z $SCRATCH_DIR ] && [ $SKIP_SCRATCH -eq 0 ]; then
+    SCRATCH_DIR="/scratch/groups/cgawad/$(date '+%Y-%m-%d')_${PROJECT}_Scratch"
+fi
+if [ -z $SCRATCH_DIR ] && [ $SKIP_SCRATCH -eq 1 ]; then
+    SCRATCH_DIR="$RESULTS_DIR"
+fi
 if [ -z $STD_ERR_OUT_DIR ]; then
     STD_ERR_OUT_DIR="${RESULTS_DIR}/std_err_out_files"
 fi
-# Make results and std error output directories if they don't exist
-if [ ! -z $FASTQ_DIR ] && [ ! -d $FASTQ_DIR ]; then
+# Make directories if they don't exist
+if [ ! -d $FASTQ_DIR ]; then
     mkdir $FASTQ_DIR
 fi
 if [ ! -d $RESULTS_DIR ]; then
     mkdir $RESULTS_DIR
 fi
+if [ ! -d $SCRATCH_DIR ]; then
+    mkdir $SCRATCH_DIR
+fi
 if [ ! -d $STD_ERR_OUT_DIR ]; then
     mkdir $STD_ERR_OUT_DIR
 fi
-OPTIONS=( "--err_out_dir $STD_ERR_OUT_DIR -r $RESULTS_DIR -d $PIPELINE_DIR -p $PROJECT" )
+OPTIONS=( "-f $FASTQ_DIR -r $RESULTS_DIR -d $PIPELINE_DIR -p $PROJECT -s $SCRATCH_DIR --err_out_dir $STD_ERR_OUT_DIR " )
 if [ ! -z $FASTQ_DIR ]; then
     OPTIONS+=( "-f $FASTQ_DIR" )
 fi
@@ -198,10 +227,15 @@ fi
 
 TEMP_PIPELINE_DIR="$( cd "$( dirname "$0" )" && pwd )"
 PIPELINE_STATUS=${STD_ERR_OUT_DIR}/${PROJECT}_pipeline_status.txt
-cd $RESULTS_DIR
+cd $SCRATCH_DIR
 if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
-    echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_COMMAND\n\nErr out dir: $STD_ERR_OUT_DIR\nResults dir: $RESULTS_DIR\nProject: $PROJECT" >> $PIPELINE_STATUS
+    echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_COMMAND\n\nResults dir: $RESULTS_DIR\nProject: $PROJECT\nScratch dir: $SCRATCH_DIR\nErr out dir: $STD_ERR_OUT_DIR" >> $PIPELINE_STATUS
     # Optional variable definitions
+    if [ $SKIP_SCRATCH -eq 0 ]; then
+        echo "Default: Scratch dir is different from Results dir" >> $PIPELINE_STATUS
+    else
+        echo "Option: Scratch dir is the same as Results dir" >> $PIPELINE_STATUS
+    fi
     if [ -z $FASTQ_DIR ]; then
         echo "Option: No fastqs to process" >> $PIPELINE_STATUS
     else
@@ -255,23 +289,10 @@ fi
 
 
 if [ $STEP -ne 0 ]; then
-    if [ -z $FASTQ_DIR ]; then
-        TEST_FASTQ_DIR=$RESULTS_DIR
-    else
-        TEST_FASTQ_DIR=$FASTQ_DIR
-    fi
     if [ -z $R1_SUFFIX ] || [ -z $R2_SUFFIX ]; then
-        R1_SUFFIX="_ref_filtered_L001_R1_001.fastq.gz"
-        R2_SUFFIX="_ref_filtered_L001_R2_001.fastq.gz"
-        if [ $(find $TEST_FASTQ_DIR -maxdepth 1 -name "*${R1_SUFFIX}" | wc -l) -eq 0 ]; then
-            R1_SUFFIX="_ref_filtered_R1_001.fastq.gz"
-            R2_SUFFIX="_ref_filtered_R2_001.fastq.gz"
-        fi
-        if [ $(find $TEST_FASTQ_DIR -maxdepth 1 -name "*${R1_SUFFIX}" | wc -l) -eq 0 ]; then
-            R1_SUFFIX="_L001_R1_001.fastq.gz"
-            R2_SUFFIX="_L001_R2_001.fastq.gz"
-        fi
-        if [ $(find $TEST_FASTQ_DIR -maxdepth 1 -name "*${R1_SUFFIX}" | wc -l) -eq 0 ]; then
+        R1_SUFFIX="_L001_R1_001.fastq.gz"
+        R2_SUFFIX="_L001_R2_001.fastq.gz"
+        if [ $(find ${FASTQ_DIR} -maxdepth 1 -name "*${R1_SUFFIX}" | wc -l) -eq 0 ]; then
             R1_SUFFIX="_R1_001.fastq.gz"
             R2_SUFFIX="_R2_001.fastq.gz"
         fi
@@ -280,14 +301,14 @@ if [ $STEP -ne 0 ]; then
             R2_SUFFIX="_R2.fastq.gz"
         fi
     fi
-    SAMPLE_ARRAY=( $(find $TEST_FASTQ_DIR -maxdepth 1 -name "*${R1_SUFFIX}" -exec basename {} \; | \
+    SAMPLE_ARRAY=( $(find ${FASTQ_DIR} -maxdepth 1 -name "*${R1_SUFFIX}" -exec basename {} \; | \
         grep -v "Undetermined" | sed "s/${R1_SUFFIX}//") )
     if [ ${#SAMPLE_ARRAY[@]} -eq 0 ]; then
-        echo "No samples found in the directory. Exiting with code 1" >> $PIPELINE_STATUS
+        echo "No fastq.gz files found in the fastq directory. Exiting with code 1" >> $PIPELINE_STATUS
         echo "END: $(date)" >> $PIPELINE_STATUS
         exit 1
     fi
-    if [ $STEP -eq 1 ] || ([ -z $FASTQ_DIR ] && [ $STEP -eq 2 ]); then
+    if [ $STEP -eq 1 ]; then
         echo -e "Number of samples: ${#SAMPLE_ARRAY[@]}\nSamples: ${SAMPLE_ARRAY[@]}" >> $PIPELINE_STATUS
     fi
 fi
@@ -322,11 +343,11 @@ elif [ $STEP -eq 1 ]; then
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $RESULTS_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
+        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
         $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $RESULTS_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
+        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
         $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
@@ -371,12 +392,12 @@ elif [ $STEP -eq 2 ]; then
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
-        $RESULTS_DIR $R1_SUFFIX $R2_SUFFIX $KRAKEN_DB_TYPES $KRAKEN_DB_DIR_PREFIX $BLAST_DB_TYPES \
+        $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $KRAKEN_DB_TYPES $KRAKEN_DB_DIR_PREFIX $BLAST_DB_TYPES \
         $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $ALIGN_MINIMUM $TOOLS_DIR $SCRIPT_DIR $PROJECT \
         $MIN_KRAKEN_READS $SUBSPECIES $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
-        $RESULTS_DIR $R1_SUFFIX $R2_SUFFIX $KRAKEN_DB_TYPES $KRAKEN_DB_DIR_PREFIX $BLAST_DB_TYPES \
+        $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $KRAKEN_DB_TYPES $KRAKEN_DB_DIR_PREFIX $BLAST_DB_TYPES \
         $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $ALIGN_MINIMUM $TOOLS_DIR $SCRIPT_DIR $PROJECT \
         $MIN_KRAKEN_READS $SUBSPECIES $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
@@ -484,6 +505,10 @@ elif [ $STEP -eq 3 ]; then
     #     --ncbi_annotations_dir $NCBI_ANNOTATIONS_DIR --contig_alignment_percent_min $CONTIG_ALIGN_MINIMUM
     # echo "### Processing consolidated results and making figures ### - END: $(date)" >> $PIPELINE_STATUS
     
-    
+    if [ "$SCRATCH_DIR" != "$RESULT_DIR" ]; then
+        echo "### Moving results from scratch dir to results dir ### - START: $(date)"
+        mv $SCRATCH_DIR/* $RESULTS_DIR/*
+        echo "### Moving results from scratch dir to results dir ### - END: $(date)"
+    fi
     echo "END: $(date)" >> $PIPELINE_STATUS
 fi

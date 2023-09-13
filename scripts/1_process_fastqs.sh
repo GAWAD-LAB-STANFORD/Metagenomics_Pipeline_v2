@@ -8,7 +8,7 @@
 
 START_TIME=$(date +%s)
 FASTQ_DIR=$1
-RESULTS_DIR=$2
+SCRATCH_DIR=$2
 R1_SUFFIX=$3
 R2_SUFFIX=$4
 SKIP_TRIMMOMATIC=$5
@@ -18,8 +18,8 @@ TOOLS_DIR=$8
 SAMPLE_ARRAY=( $(echo $9 | sed 's/:/ /g') )
 SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 
-echo -e "START: $(date)\nMetagenomics pipeline\nFastq dir: $FASTQ_DIR\nResults dir: $RESULTS_DIR\nSample: $SAMPLE"
-cd $RESULTS_DIR
+echo -e "START: $(date)\nMetagenomics pipeline\nFastq dir: $FASTQ_DIR\nResults dir: $SCRATCH_DIR\nSample: $SAMPLE"
+cd $SCRATCH_DIR
 
 ml java/11.0.11 perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
 ml biology bwa samtools gatk

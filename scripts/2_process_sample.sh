@@ -7,7 +7,7 @@
 #SBATCH --partition=cgawad
 
 START_TIME=$(date +%s)
-RESULTS_DIR=$1
+SCRATCH_DIR=$1
 R1_SUFFIX=$2
 R2_SUFFIX=$3
 KRAKEN_DB_TYPE_ARRAY=( $(echo $4 | sed 's/-/ /g') )
@@ -24,8 +24,8 @@ SUBSPECIES=${14}
 SAMPLE_ARRAY=( $(echo ${15} | sed 's/:/ /g') )
 SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 
-echo -e "START: $(date)\nMetagenomics pipeline\nResults dir: $RESULTS_DIR\nSample: $SAMPLE"
-cd $RESULTS_DIR
+echo -e "START: $(date)\nMetagenomics pipeline\nResults dir: $SCRATCH_DIR\nSample: $SAMPLE"
+cd $SCRATCH_DIR
 
 ml java perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
 ml biology bwa samtools gatk

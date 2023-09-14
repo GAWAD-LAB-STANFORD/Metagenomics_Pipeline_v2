@@ -505,7 +505,7 @@ elif [ $STEP -eq 3 ]; then
     #     --ncbi_annotations_dir $NCBI_ANNOTATIONS_DIR --contig_alignment_percent_min $CONTIG_ALIGN_MINIMUM
     # echo "### Processing consolidated results and making figures ### - END: $(date)" >> $PIPELINE_STATUS
     
-    if [ "$SCRATCH_DIR" != "$RESULT_DIR" ]; then
+    if [ "$SCRATCH_DIR" != "$RESULTS_DIR" ]; then
         echo "### Moving results from scratch dir to results dir ### - START: $(date)"
         mv $SCRATCH_DIR/* $RESULTS_DIR/*
         echo "### Moving results from scratch dir to results dir ### - END: $(date)"

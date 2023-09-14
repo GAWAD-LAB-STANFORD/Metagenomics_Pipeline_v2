@@ -28,9 +28,9 @@ Defaults: \n\t\
     blast_db_types: nt \n\t\
     num_alignments: 250 \n\t\
     align_min: 90 \n\n\
-Run after demultiplexing and fastq directory: \n\t\
+Run after demultiplexing and with fastq directory: \n\t\
     sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --project 2020-01-01_Project \n\n\
-Run after demultiplexing and results directory: \n\t\
+Run after demultiplexing and with results directory: \n\t\
     sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --results_dir /oak/stanford/groups/cgawad/2020-01-01_Results/ --project 2020-01-01_Project \n\n\
 Run with demultiplexing and fastq directory: \n\t\
     sh ${PIPELINE_DIR}/submit_all.sh --run_dir /oak/stanford/groups/cgawad/Illumina_Data/MiniSeq/2020-01-01_BCLs --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --project 2020-01-01_Project \n\n\

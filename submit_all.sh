@@ -13,9 +13,9 @@ Purpose: \n\t\
     This pipeline is built to identify metagenomic species from pair-end fastq.gz files and remove human contamination \n\n\
 Required arguments: -p/--project <arg> and either -f/--fastq_dir <arg> or -r/--results_dir <arg> \n\
 Optional arguments: -b/--run_dir <arg>, --err_out_dir <arg>, --scratch_dir <arg>, --sample_sheet <arg>, \n\t\
-    --R1_suffix <arg>, --R2_suffix <arg>, --skip_scratch, --skip_trimming, \n\t\
-    --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, --subspecies, \n\t\
-    --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
+    --R1_suffix <arg>, --R2_suffix <arg>, --skip_scratch, --skip_trimming, --skip_identify, \n\t\
+    --only_identify, --identify <arg>, --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, \n\t\
+    --subspecies, --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
 Defaults: \n\t\
     If no fastq_dir specified, uses results_dir \n\t\
     If no results_dir specified, makes new directory in fastq_dir \n\t\
@@ -43,6 +43,8 @@ For more information, read the README.md"
 # Reads in command line option arguments and assigns them to variables
 SKIP_SCRATCH=0
 SKIP_TRIMMOMATIC=0
+SKIP_IDENTIFY=0
+ONLY_IDENTIFY=0
 FILTER_RHESUS=1
 KRAKEN_DB_TYPES="microbial-plasmid-viral"
 MIN_KRAKEN_READS="10"
@@ -91,6 +93,13 @@ while [ "$1" != "" ]; do
         --skip_scratch )        SKIP_SCRATCH=1
                                 ;;
         --skip_trimming )       SKIP_TRIMMOMATIC=1
+                                ;;
+        --skip_identify )       SKIP_IDENTIFY=1
+                                ;;
+        --only_identify )       ONLY_IDENTIFY=1
+                                ;;
+        --identify )            shift
+                                IDENTIFY=$1
                                 ;;
         --filter_rhesus )       FILTER_RHESUS=1
                                 ;;
@@ -143,8 +152,8 @@ if ([ -z $FASTQ_DIR ] && [ -z $RESULTS_DIR ]) || [ -z $PROJECT ] || [ -z $PIPELI
     echo "Variables not supplied correctly. Use -h/--help options for assistance. Ending program..."
     exit 1
 fi
-if [ -z $FASTQ_DIR ] && [ $STEP -eq 0 ]; then
-    STEP=2
+if [ -z $FASTQ_DIR ]; then
+    FASTQ_DIR="$RESULTS_DIR"
 elif [ -z $RESULTS_DIR ]; then
     RESULTS_DIR="${FASTQ_DIR}/$(date '+%Y-%m-%d')_${PROJECT}_Results"
 fi
@@ -178,6 +187,10 @@ OPTIONS=( "-f $FASTQ_DIR -r $RESULTS_DIR -d $PIPELINE_DIR -p $PROJECT -s $SCRATC
 if [ ! -z $FASTQ_DIR ]; then
     OPTIONS+=( "-f $FASTQ_DIR" )
 fi
+if [ ! -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 1 ]; then
+    echo "Variables not supplied correctly. Cannot perform demultiplexing while only identifying data. Exiting with code 1"
+    exit 1
+fi
 if [ ! -z $RUN_DIR ]; then
     SAMPLE_SHEET="${RUN_DIR}/SampleSheet.csv"
 elif [ ! -z $SAMPLE_SHEET ]; then
@@ -199,6 +212,22 @@ if [ ! -z $R2_SUFFIX ]; then
 fi
 if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
     OPTIONS+=( "--skip_trimming" )
+fi
+if [ $SKIP_IDENTIFY -eq 1 ] && [ $ONLY_IDENTIFY -eq 1 ]; then
+    echo "Variables not supplied correctly. Please specify either --skip_identify or --only_identify, not both. Exiting with code 1"
+    exit 1
+elif [ $SKIP_IDENTIFY -eq 1 ]; then
+    OPTIONS+=( "--skip_identify" )
+elif [ $ONLY_IDENTIFY -eq 1 ]; then
+    OPTIONS+=( "--only_identify" )
+    if [ $STEP -eq 0 ]; then
+        STEP=2
+    fi
+fi
+if [ ! -z $IDENTIFY ]; then
+    OPTIONS+=( "--identify $IDENTIFY" )
+else
+    IDENTIFY=$PROJECT
 fi
 if [ $FILTER_RHESUS -eq 1 ]; then
     OPTIONS+=( "--filter_rhesus" )
@@ -226,20 +255,25 @@ fi
 
 
 TEMP_PIPELINE_DIR="$( cd "$( dirname "$0" )" && pwd )"
-PIPELINE_STATUS=${STD_ERR_OUT_DIR}/${PROJECT}_pipeline_status.txt
+if [ $ONLY_IDENTIFY -eq 1 ]; then
+    PIPELINE_STATUS=${STD_ERR_OUT_DIR}/${IDENTIFY}_pipeline_status.txt
+else
+    PIPELINE_STATUS=${STD_ERR_OUT_DIR}/${PROJECT}_pipeline_status.txt
+fi
 cd $SCRATCH_DIR
 if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
-    echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_COMMAND\n\nResults dir: $RESULTS_DIR\nProject: $PROJECT\nScratch dir: $SCRATCH_DIR\nErr out dir: $STD_ERR_OUT_DIR" >> $PIPELINE_STATUS
+    echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_COMMAND\n\nProject: $PROJECT\nResults dir: $RESULTS_DIR\nFastq dir: $FASTQ_DIR\nScratch dir: $SCRATCH_DIR\nErr out dir: $STD_ERR_OUT_DIR" >> $PIPELINE_STATUS
     # Optional variable definitions
+    if [ $SKIP_IDENTIFY -eq 1 ]; then
+        echo "Option: Skip identification of data - will only process the fastqs and skip BAM processing" >> $PIPELINE_STATUS
+    fi
+    if [ $ONLY_IDENTIFY -eq 1 ]; then
+        echo "Option: Only identification of data - will only process already constructed BAMs" >> $PIPELINE_STATUS
+    fi
     if [ $SKIP_SCRATCH -eq 0 ]; then
         echo "Default: Scratch dir is different from Results dir" >> $PIPELINE_STATUS
     else
         echo "Option: Scratch dir is the same as Results dir" >> $PIPELINE_STATUS
-    fi
-    if [ -z $FASTQ_DIR ]; then
-        echo "Option: No fastqs to process" >> $PIPELINE_STATUS
-    else
-        echo "Option: Fastq dir: $FASTQ_DIR" >> $PIPELINE_STATUS
     fi
     if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
         echo "Option: Skip trimming - will not run trimmomatic" >> $PIPELINE_STATUS
@@ -288,7 +322,7 @@ if [ ! -z $SLURM_OPTIONS ]; then
 fi
 
 
-if [ $STEP -ne 0 ]; then
+if [ $STEP -ne 0 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     if [ -z $R1_SUFFIX ] || [ -z $R2_SUFFIX ]; then
         R1_SUFFIX="_L001_R1_001.fastq.gz"
         R2_SUFFIX="_L001_R2_001.fastq.gz"
@@ -350,7 +384,7 @@ elif [ $STEP -eq 1 ]; then
         $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
         $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
-    echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
+    echo -e "$(date)\nIncrement: $TEMP_ARRAY_INCREMENT\nNew start: $TEMP_ARRAY_START" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#SAMPLE_ARRAY[@]} ]; then
         echo -e "\nsbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
@@ -367,7 +401,7 @@ elif [ $STEP -eq 1 ]; then
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 ${OPTIONS[@]}
     fi
-elif [ $STEP -eq 2 ]; then
+elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
         SAMPLE_COUNT=1
         for SAMPLE in ${SAMPLE_ARRAY[@]}; do
@@ -380,12 +414,34 @@ elif [ $STEP -eq 2 ]; then
         done
         rm ${STD_ERR_OUT_DIR}/*1_process_fastqs.out ${STD_ERR_OUT_DIR}/*1_process_fastqs.err
         echo "### Processing fastq samples ### - END: $(date)" >> $PIPELINE_STATUS
+    fi
+
+    if [ $SKIP_IDENTIFY -eq 1 ]; then
+        echo "Ending without identfication of data" >> $PIPELINE_STATUS
+        echo "END: $(date)" >> $PIPELINE_STATUS
+        exit 0
+    fi
+fi
+
+
+if [ $STEP -eq 2 ] || [ $STEP -eq 3 ]; then
+    SAMPLE_ARRAY=( $(ls *_contigs.fasta | sed "s/_contigs.fasta//") )
+    if [ ${#SAMPLE_ARRAY[@]} -eq 0 ]; then
+        echo "No contig fasta files found in the results directory. Exiting with code 1" >> $PIPELINE_STATUS
+        echo "END: $(date)" >> $PIPELINE_STATUS
+        exit 1
+    fi
+fi
+
+
+if [ $STEP -eq 2 ]; then
+    if [ $TEMP_ARRAY_START -eq 0 ]; then
         echo "### Processing ref filtered samples ### - START: $(date)" >> $PIPELINE_STATUS
         JOB_COUNT=${#SAMPLE_ARRAY[@]}
         echo "Process sample jobs to run: $JOB_COUNT" >> $PIPELINE_STATUS
         TEMP_ARRAY_START=1
     fi
-    
+
     TEMP_SAMPLE_ARRAY=( ${SAMPLE_ARRAY[@]:$(($TEMP_ARRAY_START - 1)):$TEMP_ARRAY_INCREMENT} )
     TEMP_JOB_COUNT=${#TEMP_SAMPLE_ARRAY[@]}
     echo -e "$(date)\nSubmitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
@@ -507,7 +563,7 @@ elif [ $STEP -eq 3 ]; then
     
     if [ "$SCRATCH_DIR" != "$RESULTS_DIR" ]; then
         echo "### Moving results from scratch dir to results dir ### - START: $(date)"
-        mv $SCRATCH_DIR/* $RESULTS_DIR/*
+        mv $SCRATCH_DIR/* $RESULTS_DIR/
         echo "### Moving results from scratch dir to results dir ### - END: $(date)"
     fi
     echo "END: $(date)" >> $PIPELINE_STATUS

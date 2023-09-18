@@ -429,9 +429,9 @@ fi
 
 
 if [ $STEP -eq 2 ] || [ $STEP -eq 3 ]; then
-    SAMPLE_ARRAY=( $(ls *_contigs.fasta | sed "s/_contigs.fasta//") )
+    SAMPLE_ARRAY=( $(ls *_ref_filtered.bam | sed "s/_ref_filtered.bam//") )
     if [ ${#SAMPLE_ARRAY[@]} -eq 0 ]; then
-        echo "No contig fasta files found in the results directory. Exiting with code 1" >> $PIPELINE_STATUS
+        echo "No filtered BAM files found in the results directory. Exiting with code 1" >> $PIPELINE_STATUS
         echo "END: $(date)" >> $PIPELINE_STATUS
         exit 1
     fi

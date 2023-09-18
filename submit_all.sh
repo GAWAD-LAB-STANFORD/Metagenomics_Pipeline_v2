@@ -12,9 +12,9 @@ HELP="\
 Purpose: \n\t\
     This pipeline is built to identify metagenomic species from pair-end fastq.gz files and remove human contamination \n\n\
 Required arguments: -p/--project <arg> and either -f/--fastq_dir <arg> or -r/--results_dir <arg> \n\
-Optional arguments: -b/--run_dir <arg>, --err_out_dir <arg>, --scratch_dir <arg>, --sample_sheet <arg>, \n\t\
-    --R1_suffix <arg>, --R2_suffix <arg>, --skip_scratch, --skip_trimming, --skip_identify, \n\t\
-    --only_identify, --identify <arg>, --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, \n\t\
+Optional arguments: -s/--scratch_dir <arg>, --err_out_dir <arg>, --skip_scratch, -b/--run_dir <arg>, \n\t\
+    --sample_sheet <arg>, --skip_identify, --only_identify, --identify <arg>, \n\t\
+    --R1_suffix <arg>, --R2_suffix <arg>, --skip_trimming, --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, \n\t\
     --subspecies, --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
 Defaults: \n\t\
     If no fastq_dir specified, uses results_dir \n\t\
@@ -22,7 +22,7 @@ Defaults: \n\t\
     scratch_dir: /scratch/groups/cgawad/date_project_Scratch \n\t\
     sample_sheet: SampleSheet.csv \n\t\
     R1_suffix: _L001_R1_001.fastq.gz or _R1_001.fastq.gz or _R1.fastq.gz \n\t\
-    R2_suffix: _L001_R2_001.fastq.gz or _R1_001.fastq.gz or _R1.fastq.gz \n\t\
+    R2_suffix: _L001_R2_001.fastq.gz or _R2_001.fastq.gz or _R2.fastq.gz \n\t\
     kraken_db_types: microbial \n\t\
     min_kraken_reads: 10 \n\t\
     blast_db_types: nt \n\t\
@@ -42,9 +42,9 @@ For more information, read the README.md"
 
 # Reads in command line option arguments and assigns them to variables
 SKIP_SCRATCH=0
-SKIP_TRIMMOMATIC=0
 SKIP_IDENTIFY=0
 ONLY_IDENTIFY=0
+SKIP_TRIMMOMATIC=0
 FILTER_RHESUS=1
 KRAKEN_DB_TYPES="microbial-plasmid-viral"
 MIN_KRAKEN_READS="10"
@@ -59,21 +59,6 @@ while [ "$1" != "" ]; do
     case $1 in
         -h | --help )           echo -e $HELP
                                 exit 0
-                                ;;
-        -b | --run_dir )        shift
-                                RUN_DIR=$1
-                                ;;
-        --sample_sheet )        shift
-                                SAMPLE_SHEET=$1
-                                ;;
-        --R1_suffix )           shift
-                                R1_SUFFIX=$1
-                                ;;
-        --R2_suffix )           shift
-                                R2_SUFFIX=$1
-                                ;;
-        --err_out_dir )         shift
-                                STD_ERR_OUT_DIR=$1
                                 ;;
         -f | --fastq_dir )      shift
                                 FASTQ_DIR=$1
@@ -90,9 +75,16 @@ while [ "$1" != "" ]; do
         -s | --scratch_dir )    shift
                                 SCRATCH_DIR=$1
                                 ;;
+        --err_out_dir )         shift
+                                STD_ERR_OUT_DIR=$1
+                                ;;
         --skip_scratch )        SKIP_SCRATCH=1
                                 ;;
-        --skip_trimming )       SKIP_TRIMMOMATIC=1
+        -b | --run_dir )        shift
+                                RUN_DIR=$1
+                                ;;
+        --sample_sheet )        shift
+                                SAMPLE_SHEET=$1
                                 ;;
         --skip_identify )       SKIP_IDENTIFY=1
                                 ;;
@@ -100,6 +92,14 @@ while [ "$1" != "" ]; do
                                 ;;
         --identify )            shift
                                 IDENTIFY=$1
+                                ;;
+        --R1_suffix )           shift
+                                R1_SUFFIX=$1
+                                ;;
+        --R2_suffix )           shift
+                                R2_SUFFIX=$1
+                                ;;
+        --skip_trimming )       SKIP_TRIMMOMATIC=1
                                 ;;
         --filter_rhesus )       FILTER_RHESUS=1
                                 ;;
@@ -204,15 +204,6 @@ if [ ! -z $RUN_DIR ] && [ ! -z $SAMPLE_SHEET ]; then
     fi
     OPTIONS+=( "--run_dir $RUN_DIR --sample_sheet $SAMPLE_SHEET" )
 fi
-if [ ! -z $R1_SUFFIX ]; then
-    OPTIONS+=( "--R1_suffix $R1_SUFFIX" )
-fi
-if [ ! -z $R2_SUFFIX ]; then
-    OPTIONS+=( "--R2_suffix $R2_SUFFIX" )
-fi
-if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
-    OPTIONS+=( "--skip_trimming" )
-fi
 if [ $SKIP_IDENTIFY -eq 1 ] && [ $ONLY_IDENTIFY -eq 1 ]; then
     echo "Variables not supplied correctly. Please specify either --skip_identify or --only_identify, not both. Exiting with code 1"
     exit 1
@@ -229,6 +220,16 @@ if [ ! -z $IDENTIFY ]; then
 else
     IDENTIFY=$PROJECT
 fi
+if [ ! -z $R1_SUFFIX ]; then
+    OPTIONS+=( "--R1_suffix $R1_SUFFIX" )
+fi
+if [ ! -z $R2_SUFFIX ]; then
+    OPTIONS+=( "--R2_suffix $R2_SUFFIX" )
+fi
+if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
+    OPTIONS+=( "--skip_trimming" )
+fi
+
 if [ $FILTER_RHESUS -eq 1 ]; then
     OPTIONS+=( "--filter_rhesus" )
     REF_FASTA_STRING="${REF_FASTA}:${RHESUS_FASTA}"
@@ -264,16 +265,19 @@ cd $SCRATCH_DIR
 if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
     echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_COMMAND\n\nProject: $PROJECT\nResults dir: $RESULTS_DIR\nFastq dir: $FASTQ_DIR\nScratch dir: $SCRATCH_DIR\nErr out dir: $STD_ERR_OUT_DIR" >> $PIPELINE_STATUS
     # Optional variable definitions
+    if [ $SKIP_SCRATCH -eq 0 ]; then
+        echo "Default: Scratch dir is different from Results dir" >> $PIPELINE_STATUS
+    else
+        echo "Option: Scratch dir is the same as Results dir" >> $PIPELINE_STATUS
+    fi
     if [ $SKIP_IDENTIFY -eq 1 ]; then
         echo "Option: Skip identification of data - will only process the fastqs and skip BAM processing" >> $PIPELINE_STATUS
     fi
     if [ $ONLY_IDENTIFY -eq 1 ]; then
         echo "Option: Only identification of data - will only process already constructed BAMs" >> $PIPELINE_STATUS
     fi
-    if [ $SKIP_SCRATCH -eq 0 ]; then
-        echo "Default: Scratch dir is different from Results dir" >> $PIPELINE_STATUS
-    else
-        echo "Option: Scratch dir is the same as Results dir" >> $PIPELINE_STATUS
+    if [ "$IDENTIFY" != "$PROJECT" ]; then
+        echo "Option: Identify different from Project: $IDENTIFY" >> $PIPELINE_STATUS
     fi
     if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
         echo "Option: Skip trimming - will not run trimmomatic" >> $PIPELINE_STATUS

@@ -416,7 +416,7 @@ elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
             fi
             SAMPLE_COUNT=$((SAMPLE_COUNT+1))
         done
-        rm ${STD_ERR_OUT_DIR}/*1_process_fastqs.out ${STD_ERR_OUT_DIR}/*1_process_fastqs.err
+        # rm ${STD_ERR_OUT_DIR}/*1_process_fastqs.out ${STD_ERR_OUT_DIR}/*1_process_fastqs.err
         echo "### Processing fastq samples ### - END: $(date)" >> $PIPELINE_STATUS
     fi
 
@@ -495,7 +495,7 @@ elif [ $STEP -eq 3 ]; then
         exit 1
     else
         echo "$RESULTS_COUNT results out of a possible $MAX_RESULTS maximum" >> $PIPELINE_STATUS
-        rm ${STD_ERR_OUT_DIR}/*2_process_sample.out ${STD_ERR_OUT_DIR}/*2_process_sample.err
+        # rm ${STD_ERR_OUT_DIR}/*2_process_sample.out ${STD_ERR_OUT_DIR}/*2_process_sample.err
     fi
     echo "### Processing ref filtered samples ### - END: $(date)" >> $PIPELINE_STATUS
     
@@ -567,7 +567,7 @@ elif [ $STEP -eq 3 ]; then
     
     if [ "$SCRATCH_DIR" != "$RESULTS_DIR" ]; then
         echo "### Moving results from scratch dir to results dir ### - START: $(date)"
-        rsync -ar $SCRATCH_DIR $RESULTS_DIR
+        rsync -ar $SCRATCH_DIR/ $RESULTS_DIR/
         echo "### Moving results from scratch dir to results dir ### - END: $(date)"
     fi
     echo "END: $(date)" >> $PIPELINE_STATUS

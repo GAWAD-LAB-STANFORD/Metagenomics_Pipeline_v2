@@ -93,7 +93,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
         echo -e "\tSpecies converted from fastqs to fastas"
         
         COUNT_BLAST_DB_TYPE=1
-        NUM_BLAST_DB_TYPES=${BLAST_DB_TYPE_ARRAY[#]}
+        NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPE_ARRAY[@]}
         for BLAST_DB_TYPE in ${BLAST_DB_TYPE_ARRAY[@]}; do
             echo -e "\tSTART: $(date)\nBlast DB type $BLAST_DB_TYPE - Blast DB number $COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES"
             export BLASTDB=${NCBI_DB_DIR_PREFIX}${BLAST_DB_TYPE}

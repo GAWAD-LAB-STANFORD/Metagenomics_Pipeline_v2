@@ -567,7 +567,7 @@ elif [ $STEP -eq 3 ]; then
     
     if [ "$SCRATCH_DIR" != "$RESULTS_DIR" ]; then
         echo "### Moving results from scratch dir to results dir ### - START: $(date)"
-        rsync -ar $SCRATCH_DIR $RESULTS_DIRrsync -ar
+        rsync -ar $SCRATCH_DIR $RESULTS_DIR
         echo "### Moving results from scratch dir to results dir ### - END: $(date)"
     fi
     echo "END: $(date)" >> $PIPELINE_STATUS

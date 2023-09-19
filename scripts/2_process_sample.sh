@@ -8,20 +8,21 @@
 
 START_TIME=$(date +%s)
 SCRATCH_DIR=$1
-R1_SUFFIX=$2
-R2_SUFFIX=$3
-KRAKEN_DB_TYPE_ARRAY=( $(echo $4 | sed 's/-/ /g') )
-KRAKEN_DB_DIR_PREFIX=$5
-BLAST_DB_TYPE_ARRAY=( $(echo $6 | sed 's/-/ /g') )
-NCBI_DB_DIR_PREFIX=$7
-NUM_ALIGNMENTS=$8
-ALIGN_MINIMUM=$9
-TOOLS_DIR=${10}
-SCRIPT_DIR=${11}
-PROJECT=${12}
-MIN_KRAKEN_READS=${13}
-SUBSPECIES=${14}
-SAMPLE_ARRAY=( $(echo ${15} | sed 's/:/ /g') )
+FASTQ_DIR=$2
+R1_SUFFIX=$3
+R2_SUFFIX=$4
+KRAKEN_DB_TYPE_ARRAY=( $(echo $5 | sed 's/-/ /g') )
+KRAKEN_DB_DIR_PREFIX=$6
+BLAST_DB_TYPE_ARRAY=( $(echo $7 | sed 's/-/ /g') )
+NCBI_DB_DIR_PREFIX=$8
+NUM_ALIGNMENTS=$9
+ALIGN_MINIMUM=${10}
+TOOLS_DIR=${11}
+SCRIPT_DIR=${12}
+PROJECT=${13}
+MIN_KRAKEN_READS=${14}
+SUBSPECIES=${15}
+SAMPLE_ARRAY=( $(echo ${16} | sed 's/:/ /g') )
 SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 
 echo -e "START: $(date)\nMetagenomics pipeline\nResults dir: $SCRATCH_DIR\nSample: $SAMPLE"
@@ -36,7 +37,7 @@ samtools view ${SAMPLE}_ref_filtered.bam > ${PROJECT}.${SAMPLE}_ref_filtered.sam
 # samtools view ${SAMPLE}_no_rhesus.bam > ${SAMPLE}_ref_filtered.sam
 for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     echo "### Identifying matches between unaligned reads and kraken2 $DB_TYPE database ### - START: $(date)"
-    kraken2 --db ${KRAKEN_DB_DIR_PREFIX}${DB_TYPE} --threads 4 --paired --gzip-compressed \
+    kraken2 --db ${KRAKEN_DB_DIR_PREFIX}${DB_TYPE} --threads 4 --fastq-input --paired --gzip-compressed \
         --output ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_vs_ref_filtered.tsv  \
         --report ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv \
         ${SAMPLE}${R1_SUFFIX} ${SAMPLE}${R2_SUFFIX}

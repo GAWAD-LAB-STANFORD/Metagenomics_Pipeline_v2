@@ -14,8 +14,8 @@ Purpose: \n\t\
 Required arguments: -p/--project <arg> and either -f/--fastq_dir <arg> or -r/--results_dir <arg> \n\
 Optional arguments: -s/--scratch_dir <arg>, --err_out_dir <arg>, --skip_scratch, -b/--run_dir <arg>, \n\t\
     --sample_sheet <arg>, --skip_identify, --only_identify, --identify <arg>, \n\t\
-    --R1_suffix <arg>, --R2_suffix <arg>, --skip_trimming, --filter_rhesus, --kraken_db_types <arg>, --min_kraken_reads <arg>, \n\t\
-    --subspecies, --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
+    --R1_suffix <arg>, --R2_suffix <arg>, --skip_trimming, --rna, --filter_rhesus, --kraken_db_types <arg>, \n\t\
+    --min_kraken_reads <arg>, --subspecies, --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
 Defaults: \n\t\
     If no fastq_dir specified, uses results_dir \n\t\
     If no results_dir specified, makes new directory in fastq_dir \n\t\
@@ -45,6 +45,7 @@ SKIP_SCRATCH=0
 SKIP_IDENTIFY=0
 ONLY_IDENTIFY=0
 SKIP_TRIMMOMATIC=0
+RNA=0
 FILTER_RHESUS=1
 KRAKEN_DB_TYPES="microbial-plasmid-viral"
 MIN_KRAKEN_READS="10"
@@ -100,6 +101,8 @@ while [ "$1" != "" ]; do
                                 R2_SUFFIX=$1
                                 ;;
         --skip_trimming )       SKIP_TRIMMOMATIC=1
+                                ;;
+        --rna )                 RNA=1
                                 ;;
         --filter_rhesus )       FILTER_RHESUS=1
                                 ;;
@@ -229,7 +232,9 @@ fi
 if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
     OPTIONS+=( "--skip_trimming" )
 fi
-
+if [ $RNA -eq 1 ]; then
+    OPTIONS+=( "--rna" )
+fi
 if [ $FILTER_RHESUS -eq 1 ]; then
     OPTIONS+=( "--filter_rhesus" )
     REF_FASTA_STRING="${REF_FASTA}:${RHESUS_FASTA}"
@@ -281,6 +286,9 @@ if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
     fi
     if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
         echo "Option: Skip trimming - will not run trimmomatic" >> $PIPELINE_STATUS
+    fi
+    if [ $RNA -eq 1 ]; then
+        echo "Option: Expecting RNA input and will align using STAR instead of BWA" >> $PIPELINE_STATUS
     fi
     if [ $FILTER_RHESUS -eq 1 ]; then
         echo "Option: Filter rhesus - will remove reads that align to macaca mulatta rhesus monkey" >> $PIPELINE_STATUS
@@ -381,11 +389,11 @@ elif [ $STEP -eq 1 ]; then
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
+        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $RNA \
         $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC \
+        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $RNA \
         $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nIncrement: $TEMP_ARRAY_INCREMENT\nNew start: $TEMP_ARRAY_START" >> $PIPELINE_STATUS

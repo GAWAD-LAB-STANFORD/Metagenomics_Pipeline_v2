@@ -12,10 +12,11 @@ SCRATCH_DIR=$2
 R1_SUFFIX=$3
 R2_SUFFIX=$4
 SKIP_TRIMMOMATIC=$5
-REF_FASTA_ARRAY=( $(echo $6 | sed 's/:/ /g') )
-REF_NAME_ARRAY=( $(echo $7 | sed 's/:/ /g') )
-TOOLS_DIR=$8
-SAMPLE_ARRAY=( $(echo $9 | sed 's/:/ /g') )
+RNA=$6
+REF_FASTA_ARRAY=( $(echo $7 | sed 's/:/ /g') )
+REF_NAME_ARRAY=( $(echo $8 | sed 's/:/ /g') )
+TOOLS_DIR=$9
+SAMPLE_ARRAY=( $(echo ${10} | sed 's/:/ /g') )
 SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 
 echo -e "START: $(date)\nMetagenomics pipeline\nFastq dir: $FASTQ_DIR\nResults dir: $SCRATCH_DIR\nSample: $SAMPLE"
@@ -58,15 +59,32 @@ PREV_R2_FASTQ=$R2_FASTQ
 for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     REF_FASTA=${REF_FASTA_ARRAY[$REF_INDEX]}
     REF_NAME=${REF_NAME_ARRAY[$REF_INDEX]}
-    
-    echo "### Aligning sample to $REF_NAME ### - START: $(date)"
-    echo -e "Ref fasta: $REF_FASTA\nR1 fastq: $PREV_R1_FASTQ\nR2 fastq: $PREV_R2_FASTQ"
-    bwa aln -t 2 $REF_FASTA $PREV_R1_FASTQ > ${SAMPLE}_${REF_NAME}_R1.sai
-    bwa aln -t 2 $REF_FASTA $PREV_R2_FASTQ > ${SAMPLE}_${REF_NAME}_R2.sai
-    bwa sampe -a 700 $REF_FASTA ${SAMPLE}_${REF_NAME}_R1.sai ${SAMPLE}_${REF_NAME}_R2.sai \
-        $PREV_R1_FASTQ $PREV_R2_FASTQ | samtools view -b - | samtools sort -o ${SAMPLE}_${REF_NAME}_aligned.bam -
-    samtools index ${SAMPLE}_${REF_NAME}_aligned.bam
-    echo "### Aligning sample to $REF_NAME ### - END: $(date)"
+
+    if [ $RNA -eq 1 ]; then
+        echo "### Aligning RNA fastqs to $REF_NAME ### - START: $(date)"
+        UNZIPPED_R1_FASTQ=$(basename $PREV_R1_FASTQ | sed "s/.gz//")
+        UNZIPPED_R2_FASTQ=$(basename $PREV_R1_FASTQ | sed "s/.gz//")
+        zcat $PREV_R1_FASTQ > $UNZIPPED_R1_FASTQ
+        zcat $PREV_R1_FASTQ > $UNZIPPED_R2_FASTQ
+        STAR --genomeDir \
+            /oak/stanford/groups/cgawad/Reference_Files/GATK_Resource_Bundle_hg38/hg38_STAR_index/ \
+            --runThreadN 2 --readFilesIn $UNZIPPED_R1_FASTQ $UNZIPPED_R2_FASTQ \
+            --outFileNamePrefix $SAMPLE --outSAMtype BAM SortedByCoordinate \
+            --outSAMunmapped Within --outSAMattributes Standard
+        rm $UNZIPPED_R1_FASTQ $UNZIPPED_R2_FASTQ
+        mv ${SAMPLE}Aligned.sortedByCoord.out.bam ${SAMPLE}_${REF_NAME}_aligned.bam
+        echo "### Aligning RNA fastqs to $REF_NAME ### - END: $(date)"
+    else
+        echo "### Aligning DNA fastqs to $REF_NAME ### - START: $(date)"
+        echo -e "Ref fasta: $REF_FASTA\nR1 fastq: $PREV_R1_FASTQ\nR2 fastq: $PREV_R2_FASTQ"
+        bwa aln -t 2 $REF_FASTA $PREV_R1_FASTQ > ${SAMPLE}_${REF_NAME}_R1.sai
+        bwa aln -t 2 $REF_FASTA $PREV_R2_FASTQ > ${SAMPLE}_${REF_NAME}_R2.sai
+        bwa sampe -a 700 $REF_FASTA ${SAMPLE}_${REF_NAME}_R1.sai ${SAMPLE}_${REF_NAME}_R2.sai \
+            $PREV_R1_FASTQ $PREV_R2_FASTQ | samtools view -b - | samtools sort -o ${SAMPLE}_${REF_NAME}_aligned.bam -
+        samtools index ${SAMPLE}_${REF_NAME}_aligned.bam
+        rm ${SAMPLE}_${REF_NAME}_R1.sai ${SAMPLE}_${REF_NAME}_R2.sai
+        echo "### Aligning DNA fastqs to $REF_NAME ### - END: $(date)"
+    fi
     
     echo "### Collecting $REF_NAME alignment metrics ### - START: $(date)"
     gatk --java-options "-XX:+UseParallelGC -XX:ParallelGCThreads=2 -Xmx32g" CollectAlignmentSummaryMetrics \
@@ -84,7 +102,6 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     
     PREV_R1_FASTQ=${SAMPLE}_no_${REF_NAME}${R1_SUFFIX}
     PREV_R2_FASTQ=${SAMPLE}_no_${REF_NAME}${R2_SUFFIX}
-    rm ${SAMPLE}_${REF_NAME}_R1.sai ${SAMPLE}_${REF_NAME}_R2.sai
     rm ${SAMPLE}_${REF_NAME}_aligned.bam ${SAMPLE}_${REF_NAME}_aligned.bam.bai
 done
 

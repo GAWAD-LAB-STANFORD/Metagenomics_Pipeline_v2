@@ -40,7 +40,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     kraken2 --db ${KRAKEN_DB_DIR_PREFIX}${DB_TYPE} --threads 4 --fastq-input --paired --gzip-compressed \
         --output ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_vs_ref_filtered.tsv  \
         --report ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv \
-        ${SAMPLE}${R1_SUFFIX} ${SAMPLE}${R2_SUFFIX}
+        ${FASTQ_DIR}/${SAMPLE}${R1_SUFFIX} ${FASTQ_DIR}/${SAMPLE}${R2_SUFFIX}
     echo "### Identifying matches between unaligned reads and kraken2 $DB_TYPE database ### - END: $(date)"
     
     echo "### Filtering out species from kraken2 $DB_TYPE results ### - START: $(date)"

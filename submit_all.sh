@@ -453,7 +453,7 @@ if [ $STEP -eq 2 ]; then
         echo "Process sample jobs to run: $JOB_COUNT" >> $PIPELINE_STATUS
         TEMP_ARRAY_START=1
     fi
-
+    
     TEMP_SAMPLE_ARRAY=( ${SAMPLE_ARRAY[@]:$(($TEMP_ARRAY_START - 1)):$TEMP_ARRAY_INCREMENT} )
     TEMP_JOB_COUNT=${#TEMP_SAMPLE_ARRAY[@]}
     echo -e "$(date)\nSubmitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
@@ -469,7 +469,7 @@ if [ $STEP -eq 2 ]; then
         $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $ALIGN_MINIMUM $TOOLS_DIR $SCRIPT_DIR $PROJECT \
         $MIN_KRAKEN_READS $SUBSPECIES $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
-    echo -e "New start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
+    echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#FASTQ_ARRAY[@]} ]; then
         echo -e "\nsbatch --dependency=afterany:$( IFS=$':'; echo "${DEPENDENCIES[*]}" ) -J $PROJECT \

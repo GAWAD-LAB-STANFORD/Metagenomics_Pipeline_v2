@@ -121,10 +121,6 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     fi
 done
 
-# echo "### Marking low complexity regions in contigs ### - START: $(date)"
-# ${TOOLS_DIR}/ncbi-blast-2.10.0+/bin/dustmasker -in ${SAMPLE}_ref_filtered_contigs.fasta -outfmt fasta -out ${SAMPLE}_contigs_high_complexity.fasta
-# echo "### Marking low complexity regions in contigs ### - END: $(date)"
-
 if [ ! -f ${SAMPLE}_ref_filtered.bam ]; then
     echo "${SAMPLE}_ref_filtered.bam not found. Exiting with code 1"
     exit 1

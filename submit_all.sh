@@ -14,8 +14,9 @@ Purpose: \n\t\
 Required arguments: -p/--project <arg> and either -f/--fastq_dir <arg> or -r/--results_dir <arg> \n\
 Optional arguments: -s/--scratch_dir <arg>, --err_out_dir <arg>, --skip_scratch, -b/--run_dir <arg>, \n\t\
     --sample_sheet <arg>, --skip_identify, --only_identify, --identify <arg>, \n\t\
-    --R1_suffix <arg>, --R2_suffix <arg>, --skip_trimming, --rna, --filter_rhesus, --kraken_db_types <arg>, \n\t\
-    --min_kraken_reads <arg>, --subspecies, --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
+    --R1_suffix <arg>, --R2_suffix <arg>, --skip_trimming, --rna, --filter_rhesus, \n\t\
+    --kraken_db_types <arg>, --min_kraken_reads <arg>, --subspecies, --blast_all, \n\t\
+    --blast_db_types <arg>, --num_alignments <arg>, --align_min <arg>, --slurm <arg> \n\
 Defaults: \n\t\
     If no fastq_dir specified, uses results_dir \n\t\
     If no results_dir specified, makes new directory in fastq_dir \n\t\
@@ -25,6 +26,7 @@ Defaults: \n\t\
     R2_suffix: _L001_R2_001.fastq.gz or _R2_001.fastq.gz or _R2.fastq.gz \n\t\
     kraken_db_types: microbial \n\t\
     min_kraken_reads: 10 \n\t\
+    blast_all: off, only blast contigs \n\t\
     blast_db_types: nt \n\t\
     num_alignments: 250 \n\t\
     align_min: 90 \n\n\
@@ -50,6 +52,7 @@ FILTER_RHESUS=1
 KRAKEN_DB_TYPES="microbial-plasmid-viral"
 MIN_KRAKEN_READS="10"
 SUBSPECIES=0
+BLAST_CONTIGS=1
 BLAST_DB_TYPES="nt-plasmid-viral"
 NUM_ALIGNMENTS=250
 ALIGN_MINIMUM=90
@@ -113,6 +116,8 @@ while [ "$1" != "" ]; do
                                 MIN_KRAKEN_READS=$1
                                 ;;
         --subspecies )          SUBSPECIES=1
+                                ;;
+        --blast_all )           BLAST_CONTIGS=0
                                 ;;
         --blast_db_types )      shift
                                 BLAST_DB_TYPES=$1
@@ -194,9 +199,9 @@ if [ ! -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 1 ]; then
     echo "Variables not supplied correctly. Cannot perform demultiplexing while only identifying data. Exiting with code 1"
     exit 1
 fi
-if [ ! -z $RUN_DIR ]; then
+if [ ! -z $RUN_DIR ] && [ -z $SAMPLE_SHEET ]; then
     SAMPLE_SHEET="${RUN_DIR}/SampleSheet.csv"
-elif [ ! -z $SAMPLE_SHEET ]; then
+elif [ -z $RUN_DIR ] && [ ! -z $SAMPLE_SHEET ]; then
     echo "Variables not supplied correctly. Please specify a run diretory for demultiplexing with --run_dir. Exiting with code 1"
     exit 1
 fi
@@ -206,6 +211,9 @@ if [ ! -z $RUN_DIR ] && [ ! -z $SAMPLE_SHEET ]; then
         exit 1
     fi
     OPTIONS+=( "--run_dir $RUN_DIR --sample_sheet $SAMPLE_SHEET" )
+fi
+if [ $STEP -eq 0 ] && [ -z $RUN_DIR ]; then
+    STEP=1
 fi
 if [ $SKIP_IDENTIFY -eq 1 ] && [ $ONLY_IDENTIFY -eq 1 ]; then
     echo "Variables not supplied correctly. Please specify either --skip_identify or --only_identify, not both. Exiting with code 1"
@@ -246,8 +254,8 @@ fi
 if [ "$KRAKEN_DB_TYPES" != "microbial" ]; then
     OPTIONS+=( "--kraken_db_types $KRAKEN_DB_TYPES" )
 fi
-if [ $STEP -eq 0 ] && [ -z $RUN_DIR ]; then
-    STEP=1
+if [ $BLAST_CONTIGS -eq 0 ]; then
+    OPTIONS+=( "--blast_all" )
 fi
 if [ "$BLAST_DB_TYPES" != "nt" ]; then
     OPTIONS+=( "--blast_db_types $BLAST_DB_TYPES" )
@@ -305,6 +313,11 @@ if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
     fi
     if [ $SUBSPECIES -eq 1 ]; then
         echo "Option: Subspecies - will include subspecies (kraken S1) in analysis" >> $PIPELINE_STATUS
+    fi
+    if [ $BLAST_CONTIGS -eq 1 ]; then
+        echo "Default: Blast contigs - will make contigs to blast from reads" >> $PIPELINE_STATUS
+    else
+        echo "Option: Blast all - will skip making contigs and blast all reads instead" >> $PIPELINE_STATUS
     fi
     if [ "$BLAST_DB_TYPES" = "nt" ]; then
         echo "Default: Blast db types: nt" >> $PIPELINE_STATUS
@@ -382,19 +395,19 @@ elif [ $STEP -eq 1 ]; then
         echo "Process sample jobs to run: $JOB_COUNT" >> $PIPELINE_STATUS
         TEMP_ARRAY_START=1
     fi
-
+    
     TEMP_SAMPLE_ARRAY=( ${SAMPLE_ARRAY[@]:$(($TEMP_ARRAY_START - 1)):$TEMP_ARRAY_INCREMENT} )
     TEMP_JOB_COUNT=${#TEMP_SAMPLE_ARRAY[@]}
     echo -e "$(date)\nSubmitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $RNA \
-        $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
+        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $TOOLS_DIR \
+        $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $RNA \
-        $REF_FASTA_STRING $REF_NAME_STRING $TOOLS_DIR $TEMP_SAMPLES_STRING) )
+        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $TOOLS_DIR \
+        $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nIncrement: $TEMP_ARRAY_INCREMENT\nNew start: $TEMP_ARRAY_START" >> $PIPELINE_STATUS
     
@@ -453,21 +466,21 @@ if [ $STEP -eq 2 ]; then
         echo "Process sample jobs to run: $JOB_COUNT" >> $PIPELINE_STATUS
         TEMP_ARRAY_START=1
     fi
-    
+        
     TEMP_SAMPLE_ARRAY=( ${SAMPLE_ARRAY[@]:$(($TEMP_ARRAY_START - 1)):$TEMP_ARRAY_INCREMENT} )
     TEMP_JOB_COUNT=${#TEMP_SAMPLE_ARRAY[@]}
     echo -e "$(date)\nSubmitting $TEMP_JOB_COUNT jobs for samples $TEMP_ARRAY_START to $(($TEMP_ARRAY_START + ${#TEMP_SAMPLE_ARRAY[@]} - 1))" >> $PIPELINE_STATUS
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
-        $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $KRAKEN_DB_TYPES $KRAKEN_DB_DIR_PREFIX $BLAST_DB_TYPES \
-        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $ALIGN_MINIMUM $TOOLS_DIR $SCRIPT_DIR $PROJECT \
-        $MIN_KRAKEN_READS $SUBSPECIES $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
+        $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $TOOLS_DIR $PROJECT $KRAKEN_DB_TYPES \
+        $KRAKEN_DB_DIR_PREFIX $MIN_KRAKEN_READS $SUBSPECIES $BLAST_CONTIGS $BLAST_DB_TYPES \
+        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
-        $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $KRAKEN_DB_TYPES $KRAKEN_DB_DIR_PREFIX $BLAST_DB_TYPES \
-        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $ALIGN_MINIMUM $TOOLS_DIR $SCRIPT_DIR $PROJECT \
-        $MIN_KRAKEN_READS $SUBSPECIES $TEMP_SAMPLES_STRING) )
+        $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $TOOLS_DIR $PROJECT $KRAKEN_DB_TYPES \
+        $KRAKEN_DB_DIR_PREFIX $MIN_KRAKEN_READS $SUBSPECIES $BLAST_CONTIGS $BLAST_DB_TYPES \
+        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING) )
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     

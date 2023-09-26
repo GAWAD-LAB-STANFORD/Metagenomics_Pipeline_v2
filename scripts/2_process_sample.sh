@@ -33,6 +33,7 @@ ml java perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
 ml biology bwa samtools gatk
 export R_LIBS="/home/groups/cgawad/R_LIBS"
 export PATH=${TOOLS_DIR}/kraken2-2.0.8-beta:$PATH
+export PATH=${TOOLS_DIR}/mmseqs/bin/:$PATH
 
 samtools view ${SAMPLE}_ref_filtered.bam > temp_${SAMPLE}_ref_filtered.sam
 if [ $BLAST_CONTIGS -eq 1 ]; then

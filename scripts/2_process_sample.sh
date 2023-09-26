@@ -87,24 +87,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             -F2 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX}
         echo -e "\t\tSpecies converted from reads to fastqs"
         
-        
-        if [ $BLAST_CONTIGS -eq 0 ]; then
-            ${TOOLS_DIR}/BBTools/bbmap_38.87/dedupe.sh \
-                in=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} \
-                out=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta s=3
-            awk 'NR % 3 == 1' temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta | \
-                sed 's/>//g' | sed "s/.$/2/g" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header
-            zcat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} | \
-                awk "NR % 4 == 1 || NR % 4 == 2" | sed 's/@/>/g' \
-                > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta
-            grep -A 1 -wFf  temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header \
-                temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta \
-                > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2.fasta
-            cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta \
-                temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2.fasta | sed "s/--//g" | awk 'NF' \
-                > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
-            echo -e "\t\tSpecies converted from fastqs to fastas"
-        else
+        if [ $BLAST_CONTIGS -eq 1 ]; then
             mkdir spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
             python3 /oak/stanford/groups/cgawad/Sequencing_Analysis_Tools/SPAdes-3.14.0-Linux/bin/spades.py \
                 -t 4 -m 64 -1 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} -2 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} \
@@ -133,6 +116,22 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             CONTIG_UNALIGNED_READS=$(samtools view temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_contig_aligned.bam | cut -f 3 | grep -v "NODE" | wc -l)
             echo -e "$SAMPLE\t$READS\t$SPECIES_ID\t$DB_TYPE\t$CONTIG_ALIGNED_READS\t$CONTIG_UNALIGNED_READS" >> ${PROJECT}.${SAMPLE}_read_targets_counts.tsv
             echo -e "\t\tCollected read-to-contig target counts"
+        else
+            ${TOOLS_DIR}/BBTools/bbmap_38.87/dedupe.sh \
+                in=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} \
+                out=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta s=3
+            awk 'NR % 3 == 1' temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta | \
+                sed 's/>//g' | sed "s/.$/2/g" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header
+            zcat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} | \
+                awk "NR % 4 == 1 || NR % 4 == 2" | sed 's/@/>/g' \
+                > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta
+            grep -A 1 -wFf  temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header \
+                temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta \
+                > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2.fasta
+            cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta \
+                temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2.fasta | sed "s/--//g" | awk 'NF' \
+                > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
+            echo -e "\t\tSpecies converted from fastqs to fastas"
         fi
         
         # COUNT_BLAST_DB_TYPE=1
@@ -174,13 +173,13 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
         rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} 
         rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX}
         if [ $BLAST_CONTIGS -eq 0 ]; then
-            rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
+            # rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header
         else
-            rm -r spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
+            # rm -r spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
             rm temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_contig_aligned.bam
             rm temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_contig_aligned.bam.bai
             rm temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_temp_contig_read_targets.txt
@@ -189,7 +188,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     rm temp_${SAMPLE}_${DB_TYPE}_kraken_species.tsv
     rm temp_${SAMPLE}_${DB_TYPE}_kraken_vs_ref_filtered.tsv
     COUNT_KRAKEN_DB_TYPE=$((COUNT_KRAKEN_DB_TYPE+1))
-    echo -e "\t### Comparing kraken species from $DB_TYPE with BLAST ### - START: $(date)"
+    echo -e "\t### Comparing kraken species from $DB_TYPE with BLAST ### - END: $(date)"
     
     
     # echo -e "\t### Consolidating final species files for $DB_TYPE results ### - START: $(date)"
@@ -238,7 +237,7 @@ if [ $BLAST_CONTIGS -eq 1 ]; then
     done
     echo "Merged contigs" >> $PIPELINE_STATUS
     # rm ${CONTIGS_FILENAMES[@]}
-    echo "### Consolidating contig data ### - START: $(date)"
+    echo "### Consolidating contig data ### - END: $(date)"
 fi
 
 

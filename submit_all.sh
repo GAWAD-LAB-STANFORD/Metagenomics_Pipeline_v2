@@ -212,9 +212,6 @@ if [ ! -z $RUN_DIR ] && [ ! -z $SAMPLE_SHEET ]; then
     fi
     OPTIONS+=( "--run_dir $RUN_DIR --sample_sheet $SAMPLE_SHEET" )
 fi
-if [ $STEP -eq 0 ] && [ -z $RUN_DIR ]; then
-    STEP=1
-fi
 if [ $SKIP_IDENTIFY -eq 1 ] && [ $ONLY_IDENTIFY -eq 1 ]; then
     echo "Variables not supplied correctly. Please specify either --skip_identify or --only_identify, not both. Exiting with code 1"
     exit 1
@@ -222,9 +219,6 @@ elif [ $SKIP_IDENTIFY -eq 1 ]; then
     OPTIONS+=( "--skip_identify" )
 elif [ $ONLY_IDENTIFY -eq 1 ]; then
     OPTIONS+=( "--only_identify" )
-    if [ $STEP -eq 0 ]; then
-        STEP=2
-    fi
 fi
 if [ ! -z $IDENTIFY ]; then
     OPTIONS+=( "--identify $IDENTIFY" )
@@ -347,7 +341,7 @@ if [ ! -z $SLURM_OPTIONS ]; then
 fi
 
 
-if [ $STEP -ne 0 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
+if ([ $STEP -eq 0 ] && [ -z $RUN_DIR ]) || [ $STEP -eq 1 ] || [ $STEP -eq 2 ]; then
     if [ -z $R1_SUFFIX ] || [ -z $R2_SUFFIX ]; then
         R1_SUFFIX="_L001_R1_001.fastq.gz"
         R2_SUFFIX="_L001_R2_001.fastq.gz"
@@ -367,13 +361,10 @@ if [ $STEP -ne 0 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
         echo "END: $(date)" >> $PIPELINE_STATUS
         exit 1
     fi
-    if [ $STEP -eq 1 ]; then
-        echo -e "Number of samples: ${#SAMPLE_ARRAY[@]}\nSamples: ${SAMPLE_ARRAY[@]}" >> $PIPELINE_STATUS
-    fi
 fi
 
 
-if [ $STEP -eq 0 ]; then
+if [ $STEP -eq 0 ] && [ ! -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     echo "### Demultiplexing ### - START: $(date)" >> $PIPELINE_STATUS
     echo -e "Run dir: $RUN_DIR\nSample sheet: $SAMPLE_SHEET" >> $PIPELINE_STATUS
     echo -e "\nsbatch --parsable -e ${STD_ERR_OUT_DIR}/%A_%x.err -o ${STD_ERR_OUT_DIR}/%A_%x.out \
@@ -388,8 +379,9 @@ if [ $STEP -eq 0 ]; then
     sbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
         -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
         ${PIPELINE_DIR}/submit_all.sh --step1 ${OPTIONS[@]}
-elif [ $STEP -eq 1 ]; then
+elif [ $STEP -eq 1 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
+        echo -e "Number of samples: ${#SAMPLE_ARRAY[@]}\nSamples: ${SAMPLE_ARRAY[@]}" >> $PIPELINE_STATUS
         echo "### Processing fastq samples ### - START: $(date)" >> $PIPELINE_STATUS
         JOB_COUNT=${#SAMPLE_ARRAY[@]}
         echo "Process sample jobs to run: $JOB_COUNT" >> $PIPELINE_STATUS
@@ -449,8 +441,12 @@ elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
 fi
 
 
-if [ $STEP -eq 2 ] || [ $STEP -eq 3 ]; then
-    SAMPLE_ARRAY=( $(ls *_ref_filtered.bam | sed "s/_ref_filtered.bam//") )
+if ([ $STEP -eq 0 ] && [ $ONLY_IDENTIFY -eq 1 ]) || [ $STEP -eq 2 ]; then
+    SAMPLE_ARRAY=( $(ls *_ref_filtered.bam 2> /dev/null | sed "s/_ref_filtered.bam//") )
+    if [ ${#SAMPLE_ARRAY[@]} -eq 0 ]; then
+        cp $RESULTS_DIR/*_ref_filtered.bam $SCRATCH_DIR/
+        SAMPLE_ARRAY=( $(ls *_ref_filtered.bam | sed "s/_ref_filtered.bam//") )
+    fi
     if [ ${#SAMPLE_ARRAY[@]} -eq 0 ]; then
         echo "No filtered BAM files found in the results directory. Exiting with code 1" >> $PIPELINE_STATUS
         echo "END: $(date)" >> $PIPELINE_STATUS
@@ -459,8 +455,9 @@ if [ $STEP -eq 2 ] || [ $STEP -eq 3 ]; then
 fi
 
 
-if [ $STEP -eq 2 ]; then
+if ([ $STEP -eq 0 ] && [ $ONLY_IDENTIFY -eq 1 ]) || [ $STEP -eq 2 ]; then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
+        echo -e "Number of samples: ${#SAMPLE_ARRAY[@]}\nSamples: ${SAMPLE_ARRAY[@]}" >> $PIPELINE_STATUS
         echo "### Processing ref filtered samples ### - START: $(date)" >> $PIPELINE_STATUS
         JOB_COUNT=${#SAMPLE_ARRAY[@]}
         echo "Process sample jobs to run: $JOB_COUNT" >> $PIPELINE_STATUS
@@ -535,8 +532,7 @@ elif [ $STEP -eq 3 ]; then
                 echo -e "$SAMPLE\t$R1\n$SAMPLE\t$R2\n$SAMPLE\t$PAIR"
             done | sed 's/ /\t/g' >> ${PROJECT}.${REF_NAME}_alignment_metrics_final.tsv
             echo "Merged $REF_NAME alignment metrics" >> $PIPELINE_STATUS
-            
-            rm ${ALIGNMENT_METRICS_FILENAMES[@]}
+            # rm ${ALIGNMENT_METRICS_FILENAMES[@]}
         done
     fi
     
@@ -555,8 +551,7 @@ elif [ $STEP -eq 3 ]; then
         for i in ${KRAKEN_BLAST_FILENAMES[@]}; do
             tail -n +2 $i >> ${PROJECT}.${DB_TYPE}_kraken_blast_final.tsv
         done
-        
-        rm ${KRAKEN_REPORT_FILENAMES[@]} ${KRAKEN_BLAST_FILENAMES[@]}
+        # rm ${KRAKEN_REPORT_FILENAMES[@]} ${KRAKEN_BLAST_FILENAMES[@]}
     done
     echo "### Consolidating files ### - END: $(date)" >> $PIPELINE_STATUS
     

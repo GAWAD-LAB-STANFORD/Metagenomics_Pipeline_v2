@@ -134,52 +134,52 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "\t\tSpecies converted from fastqs to fastas"
         fi
         
-        # COUNT_BLAST_DB_TYPE=1
-        # NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPE_ARRAY[@]}
-        # for BLAST_DB_TYPE in ${BLAST_DB_TYPE_ARRAY[@]}; do
-        #     echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
-        #     export BLASTDB=${NCBI_DB_DIR_PREFIX}${BLAST_DB_TYPE}
-        #     
-        #     if [ $BLAST_CONTIGS -eq 0 ]; then
-        #         ${TOOLS_DIR}/ncbi-blast-2.10.0+/bin/blastn -db $BLAST_DB_TYPE -num_alignments ${NUM_ALIGNMENTS} \
-        #             -num_threads 2 -outfmt 15 -query temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta \
-        #             -out ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json
-        #     else
-        #         ${TOOLS_DIR}/ncbi-blast-2.10.0+/bin/blastn -db $BLAST_DB_TYPE -num_alignments ${NUM_ALIGNMENTS} \
-        #             -num_threads 2 -outfmt 15 -query temp_${SAMPLE}.${SPECIES_ID}_${DB_TYPE}_kraken_contigs.fasta \
-        #             -out ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json
-        #     fi
-        #     echo -e "\t\t\tSpecies blasted"
-        #     
-        #     python3 ${SCRIPT_DIR}/blast_json_to_tsv.py \
-        #         -i ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json \
-        #         -o ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv \
-        #         -b $BLAST_DB_TYPE -s $SAMPLE -k $DB_TYPE -d $SPECIES_ID
-        #     echo -e "\t\t\tSpecies blast results converted from json to tsv"
-        #     
-        #     Rscript ${SCRIPT_DIR}/process_blast_tsv.R \
-        #         ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv $ALIGN_MINIMUM
-        #     if [ $(cat ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv | wc -l) -le 1 ]; then
-        #         rm ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv
-        #     fi
-        #     echo -e "\t\t\tSpecies blast results processed"
-        #      
-        #     rm ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json
-        #     COUNT_BLAST_DB_TYPE=$((COUNT_BLAST_DB_TYPE+1))
-        # done
+        COUNT_BLAST_DB_TYPE=1
+        NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPE_ARRAY[@]}
+        for BLAST_DB_TYPE in ${BLAST_DB_TYPE_ARRAY[@]}; do
+            echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
+            export BLASTDB=${NCBI_DB_DIR_PREFIX}${BLAST_DB_TYPE}
+            
+            if [ $BLAST_CONTIGS -eq 0 ]; then
+                ${TOOLS_DIR}/ncbi-blast-2.10.0+/bin/blastn -db $BLAST_DB_TYPE -num_alignments ${NUM_ALIGNMENTS} \
+                    -num_threads 2 -outfmt 15 -query temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta \
+                    -out ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json
+            else
+                ${TOOLS_DIR}/ncbi-blast-2.10.0+/bin/blastn -db $BLAST_DB_TYPE -num_alignments ${NUM_ALIGNMENTS} \
+                    -num_threads 2 -outfmt 15 -query temp_${SAMPLE}.${SPECIES_ID}_${DB_TYPE}_kraken_contigs.fasta \
+                    -out ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json
+            fi
+            echo -e "\t\t\tSpecies blasted"
+            
+            python3 ${SCRIPT_DIR}/blast_json_to_tsv.py \
+                -i ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json \
+                -o ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv \
+                -b $BLAST_DB_TYPE -s $SAMPLE -k $DB_TYPE -d $SPECIES_ID
+            echo -e "\t\t\tSpecies blast results converted from json to tsv"
+            
+            Rscript ${SCRIPT_DIR}/process_blast_tsv.R \
+                ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv $ALIGN_MINIMUM
+            if [ $(cat ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv | wc -l) -le 1 ]; then
+                rm ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.tsv
+            fi
+            echo -e "\t\t\tSpecies blast results processed"
+             
+            rm ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_${BLAST_DB_TYPE}_blast.json
+            COUNT_BLAST_DB_TYPE=$((COUNT_BLAST_DB_TYPE+1))
+        done
         
         rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_read_headers.tsv
         rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.sam
         rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} 
         rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX}
         if [ $BLAST_CONTIGS -eq 0 ]; then
-            # rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
+            rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2.fasta
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header
         else
-            # rm -r spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
+            rm -r spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
             rm temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_contig_aligned.bam
             rm temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_contig_aligned.bam.bai
             rm temp_${SAMPLE}_${SPECIES_ID}_${DB_TYPE}_kraken_temp_contig_read_targets.txt
@@ -191,22 +191,22 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     echo -e "\t### Comparing kraken species from $DB_TYPE with BLAST ### - END: $(date)"
     
     
-    # echo -e "\t### Consolidating final species files for $DB_TYPE results ### - START: $(date)"
-    # BLAST_FILENAMES=( $(ls ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_*_blast.tsv) )
-    # head -n 1 ${BLAST_FILENAMES[0]} > ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-    # for i in ${BLAST_FILENAMES[@]}; do
-    #     tail -n +2 $i >> ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-    # done
-    # if [ $(cat ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv | wc -l) -le 1 ]; then
-    #     rm ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-    # else
-    #     python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
-    #         -b ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv \
-    #         -k ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv
-    # fi
-    # echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
-    # rm ${BLAST_FILENAMES[@]}
-    # echo -e "\t### Consolidating final species files for $DB_TYPE results ### - END: $(date)"
+    echo -e "\t### Consolidating final species files for $DB_TYPE results ### - START: $(date)"
+    BLAST_FILENAMES=( $(ls ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_*_blast.tsv) )
+    head -n 1 ${BLAST_FILENAMES[0]} > ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+    for i in ${BLAST_FILENAMES[@]}; do
+        tail -n +2 $i >> ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+    done
+    if [ $(cat ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv | wc -l) -le 1 ]; then
+        rm ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+    else
+        python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
+            -b ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv \
+            -k ${PROJECT}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv
+    fi
+    echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
+    rm ${BLAST_FILENAMES[@]}
+    echo -e "\t### Consolidating final species files for $DB_TYPE results ### - END: $(date)"
 done
 rm temp_${SAMPLE}_ref_filtered.sam
 

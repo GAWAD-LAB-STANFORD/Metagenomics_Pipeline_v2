@@ -379,7 +379,7 @@ if [ $STEP -eq 0 ] && [ ! -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     sbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
         -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
         ${PIPELINE_DIR}/submit_all.sh --step1 ${OPTIONS[@]}
-elif [ $STEP -eq 1 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
+elif ([ $STEP -eq 0 ] && [ -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]) || ([ $STEP -eq 1 ] && [ $ONLY_IDENTIFY -eq 0 ]); then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
         echo -e "Number of samples: ${#SAMPLE_ARRAY[@]}\nSamples: ${SAMPLE_ARRAY[@]}" >> $PIPELINE_STATUS
         echo "### Processing fastq samples ### - START: $(date)" >> $PIPELINE_STATUS

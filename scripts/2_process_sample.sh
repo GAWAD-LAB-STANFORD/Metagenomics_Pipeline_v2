@@ -133,6 +133,8 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
                 > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
             echo -e "\t\tSpecies converted from fastqs to fastas"
         fi
+
+        mmseqs easy-search --threads 1 --search-type 3 temp_IL7RLow-430-scIndex-Plate1-WGS-sc-430-H10_S60.5855_microbial_kraken_contigs.fasta /oak/stanford/groups/cgawad/Reference_Files/mmseqs_Databases/NT/nt temp_IL7RLow-430-scIndex-Plate1-WGS-sc-430-H10_S60.5855_microbial_kraken_contigs.m8 temp_IL7RLow-430-scIndex-Plate1-WGS-sc-430-H10_S60_mmseqs2
         
         COUNT_BLAST_DB_TYPE=1
         NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPE_ARRAY[@]}
@@ -212,7 +214,7 @@ rm temp_${SAMPLE}_ref_filtered.sam
 
 
 if [ $BLAST_CONTIGS -eq 1 ]; then
-    echo "### Consolidating alignment metrics ### - START: $(date)"
+    echo "### Consolidating contig alignment metrics ### - START: $(date)"
     CONTIG_ALIGNMENT_METRICS_FILENAMES=( $(ls temp_${SAMPLE}_*_contig_alignment_metrics.tsv) )
     echo -e "sample\tspecies_id\tkraken_db\t$(sed -n '7p' ${CONTIG_ALIGNMENT_METRICS_FILENAMES[0]})" > ${PROJECT}.${SAMPLE}_contig_alignment_metrics.tsv
     for i in ${CONTIG_ALIGNMENT_METRICS_FILENAMES[@]}; do
@@ -224,7 +226,7 @@ if [ $BLAST_CONTIGS -eq 1 ]; then
         echo -e "$SAMPLE\t$SPECIES_ID\t$DB_TYPE\t$R1\n$SAMPLE\t$SPECIES_ID\t$DB_TYPE\t$R2\n$SAMPLE\t$SPECIES_ID\t$DB_TYPE\t$PAIR\n" >> ${PROJECT}.${SAMPLE}_contig_alignment_metrics.tsv
     done
     rm ${CONTIG_ALIGNMENT_METRICS_FILENAMES[@]}
-    echo "### Consolidating alignment metrics ### - END: $(date)"
+    echo "### Consolidating contig alignment metrics ### - END: $(date)"
 
 
     echo "### Consolidating contig data ### - START: $(date)"

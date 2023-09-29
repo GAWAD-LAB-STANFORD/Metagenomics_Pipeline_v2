@@ -88,7 +88,7 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     
     echo "### Collecting $REF_NAME alignment metrics ### - START: $(date)"
     gatk --java-options "-XX:+UseParallelGC -XX:ParallelGCThreads=2 -Xmx32g" CollectAlignmentSummaryMetrics \
-        -R $REF_FASTA -I ${SAMPLE}_${REF_NAME}_aligned.bam -O ${SAMPLE}_${REF_NAME}_alignment_metrics.tsv
+        -R $REF_FASTA -I ${SAMPLE}_${REF_NAME}_aligned.bam -O temp_${SAMPLE}_${REF_NAME}_ref_alignment_metrics.tsv
     echo "### Collecting $REF_NAME alignment metrics ### - END: $(date)"
     
     echo "### Filtering unmapped reads from $REF_NAME into a new BAM ### - START: $(date)"

@@ -431,6 +431,21 @@ elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
         done
         # rm ${STD_ERR_OUT_DIR}/*1_process_fastqs.out ${STD_ERR_OUT_DIR}/*1_process_fastqs.err
         echo "### Processing fastq samples ### - END: $(date)" >> $PIPELINE_STATUS
+
+
+        echo "### Consolidating ref alignment metrics ### - START: $(date)"
+        REF_ALIGNMENT_METRICS_FILENAMES=( $(ls temp_*_ref_alignment_metrics.tsv) )
+        echo -e "sample\tref\t$(sed -n '7p' ${REF_ALIGNMENT_METRICS_FILENAMES[0]})" > ${PROJECT}.${SAMPLE}_ref_alignment_metrics.tsv
+        for i in ${REF_ALIGNMENT_METRICS_FILENAMES[@]}; do
+            SAMPLE=$(echo $i | cut -d '_' -f 2)
+            REF=$(echo $i | cut -d '_' -f 3)
+            R1=$(head -n '8p' $i)
+            R2=$(head -n '9p' $i)
+            PAIR=$(head -n '10p' $i)
+            echo -e "$SAMPLE\t$REF\t$DB_TYPE\t$R1\n$SAMPLE\t$REF\t$DB_TYPE\t$R2\n$SAMPLE\t$REF\t$DB_TYPE\t$PAIR\n" >> ${PROJECT}.${SAMPLE}_ref_alignment_metrics.tsv
+        done
+        rm ${REF_ALIGNMENT_METRICS_FILENAMES[@]}
+        echo "### Consolidating ref alignment metrics ### - END: $(date)"
     fi
 
     if [ $SKIP_IDENTIFY -eq 1 ]; then

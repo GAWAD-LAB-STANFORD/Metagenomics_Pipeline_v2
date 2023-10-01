@@ -92,6 +92,10 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             python3 /oak/stanford/groups/cgawad/Sequencing_Analysis_Tools/SPAdes-3.14.0-Linux/bin/spades.py \
                 -t 4 -m 64 -1 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} -2 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} \
                 -o spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
+            if [ ! -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/contigs.fasta ]; then
+                echo -e "\t\tWARNING: No contigs made, skipping rest of this kraken species"
+                continue
+            fi
             mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/contigs.fasta temp_${SAMPLE}.${SPECIES_ID}_${DB_TYPE}_kraken_contigs.fasta
             echo -e "\t\tSpecies contigs built"
             
@@ -133,8 +137,6 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
                 > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta
             echo -e "\t\tSpecies converted from fastqs to fastas"
         fi
-
-        mmseqs easy-search --threads 1 --search-type 3 temp_IL7RLow-430-scIndex-Plate1-WGS-sc-430-H10_S60.5855_microbial_kraken_contigs.fasta /oak/stanford/groups/cgawad/Reference_Files/mmseqs_Databases/NT/nt temp_IL7RLow-430-scIndex-Plate1-WGS-sc-430-H10_S60.5855_microbial_kraken_contigs.m8 temp_IL7RLow-430-scIndex-Plate1-WGS-sc-430-H10_S60_mmseqs2
         
         COUNT_BLAST_DB_TYPE=1
         NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPE_ARRAY[@]}

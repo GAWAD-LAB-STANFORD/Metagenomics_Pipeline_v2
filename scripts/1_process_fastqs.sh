@@ -115,10 +115,9 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
         cp ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX} ${SAMPLE}_ref_filtered${R2_SUFFIX}
         cp ${SAMPLE}_no_${REF_NAME}.bam ${SAMPLE}_ref_filtered.bam
         cp ${SAMPLE}_no_${REF_NAME}.bam.bai ${SAMPLE}_ref_filtered.bam.bai
-    else
-        rm ${SAMPLE}_no_${REF_NAME}${R1_SUFFIX} ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX}
-        rm ${SAMPLE}_no_${REF_NAME}.bam ${SAMPLE}_no_${REF_NAME}.bam.bai
     fi
+    rm ${SAMPLE}_no_${REF_NAME}${R1_SUFFIX} ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX}
+    rm ${SAMPLE}_no_${REF_NAME}.bam ${SAMPLE}_no_${REF_NAME}.bam.bai
 done
 
 if [ ! -f ${SAMPLE}_ref_filtered.bam ]; then

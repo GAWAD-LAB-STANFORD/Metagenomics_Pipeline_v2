@@ -50,8 +50,8 @@ fi
 echo "### Counting fastq read counts ### - START: $(date)"
 READ_COUNT=$(echo $(zcat $R1_FASTQ | wc -l ) \
     $(zcat $R2_FASTQ | wc -l) | awk '{ print ($1 + $2) / 4 }' )
-echo -e "sample\tread_count" > ${SAMPLE}.read_counts.tsv
-echo -e "$SAMPLE\t$READ_COUNT" >> ${SAMPLE}.read_counts.tsv
+echo -e "sample\tread_count" > ${SAMPLE}_read_counts.tsv
+echo -e "$SAMPLE\t$READ_COUNT" >> ${SAMPLE}_read_counts.tsv
 echo "### Counting fastq read counts ### - END: $(date)"
 
 PREV_R1_FASTQ=$R1_FASTQ
@@ -88,7 +88,7 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     
     echo "### Collecting $REF_NAME alignment metrics ### - START: $(date)"
     gatk --java-options "-XX:+UseParallelGC -XX:ParallelGCThreads=2 -Xmx32g" CollectAlignmentSummaryMetrics \
-        -R $REF_FASTA -I ${SAMPLE}_${REF_NAME}_aligned.bam -O temp_${SAMPLE}_${REF_NAME}_ref_alignment_metrics.tsv
+        -R $REF_FASTA -I ${SAMPLE}_${REF_NAME}_aligned.bam -O ${SAMPLE}_${REF_NAME}_ref_alignment_metrics.tsv
     echo "### Collecting $REF_NAME alignment metrics ### - END: $(date)"
     
     echo "### Filtering unmapped reads from $REF_NAME into a new BAM ### - START: $(date)"
@@ -119,6 +119,8 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     rm ${SAMPLE}_no_${REF_NAME}${R1_SUFFIX} ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX}
     rm ${SAMPLE}_no_${REF_NAME}.bam ${SAMPLE}_no_${REF_NAME}.bam.bai
 done
+rm ${SAMPLE}_ref_filtered${R1_SUFFIX}
+rm ${SAMPLE}_ref_filtered${R2_SUFFIX}
 
 if [ ! -f ${SAMPLE}_ref_filtered.bam ]; then
     echo "${SAMPLE}_ref_filtered.bam not found. Exiting with code 1"

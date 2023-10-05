@@ -42,7 +42,7 @@ blast_function () {
     local LOCAL_KRAKEN_DB=$3
     local LOCAL_SPECIES_ID=$4
     local LOCAL_JSON=$(echo $LOCAL_QUERY | sed "s/.fasta/_${LOCAL_BLAST_DB}_blast.json/")
-    local LOCAL_TSV=$(echo $LOCAL_JSON | sed "s/.json/.tsv/" | sed "s/temp_/${IDENTIFY}./")
+    local LOCAL_TSV=$(echo $LOCAL_JSON | sed "s/.json/.tsv/" | sed "s/temp_//")
     
     export BLASTDB=${NCBI_DB_DIR_PREFIX}${LOCAL_BLAST_DB}
     ${TOOLS_DIR}/ncbi-blast-2.10.0+/bin/blastn -db $LOCAL_BLAST_DB -num_alignments ${NUM_ALIGNMENTS} \
@@ -66,12 +66,12 @@ blast_function () {
 samtools view ${SAMPLE}_ref_filtered.bam > temp_${SAMPLE}_ref_filtered.sam
 if [ $BLAST_CONTIGS -eq 1 ]; then
     READS=$(samtools view ${SAMPLE}_ref_filtered.bam | cut -f 3 | grep "chr" | wc -l)
-    echo -e "sample\ttotal_reads\tkraken_db\tspecies_id\tcontig_aligned\tcontig_unaligned" > ${IDENTIFY}.${SAMPLE}_kraken_contig_read_target_counts.tsv
-    echo -e "read_count\tsample\tkraken_db\tspecies_id\ttarget" > ${IDENTIFY}.${SAMPLE}_kraken_contig_read_targets.tsv
-    echo -e "sample\tkraken_db\tspecies_id\tcontig" > ${IDENTIFY}.${SAMPLE}_contig_data.tsv
-    echo -e "sample\ttotal_reads\tkraken_db\tspecies_id\tscaffold_aligned\tscaffold_unaligned" > ${IDENTIFY}.${SAMPLE}_kraken_scaffold_read_target_counts.tsv
-    echo -e "read_count\tsample\tkraken_db\tspecies_id\ttarget" > ${IDENTIFY}.${SAMPLE}_kraken_scaffold_read_targets.tsv
-    echo -e "sample\tkraken_db\tspecies_id\tscaffold" > ${IDENTIFY}.${SAMPLE}_scaffold_data.tsv
+    echo -e "sample\ttotal_reads\tkraken_db\tspecies_id\tcontig_aligned\tcontig_unaligned" > ${SAMPLE}_kraken_contig_read_target_counts.tsv
+    echo -e "read_count\tsample\tkraken_db\tspecies_id\ttarget" > ${SAMPLE}_kraken_contig_read_targets.tsv
+    echo -e "sample\tkraken_db\tspecies_id\tcontig" > ${SAMPLE}_contig_data.tsv
+    echo -e "sample\ttotal_reads\tkraken_db\tspecies_id\tscaffold_aligned\tscaffold_unaligned" > ${SAMPLE}_kraken_scaffold_read_target_counts.tsv
+    echo -e "read_count\tsample\tkraken_db\tspecies_id\ttarget" > ${SAMPLE}_kraken_scaffold_read_targets.tsv
+    echo -e "sample\tkraken_db\tspecies_id\tscaffold" > ${SAMPLE}_scaffold_data.tsv
 fi
 COUNT_KRAKEN_DB_TYPE=1
 NUM_KRAKEN_DB_TYPES=${#KRAKEN_DB_TYPE_ARRAY[@]}
@@ -80,7 +80,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     echo -e "\t### Identifying matches between unaligned reads and kraken2 $DB_TYPE database ### - START: $(date)"
     kraken2 --db ${KRAKEN_DB_DIR_PREFIX}${DB_TYPE} --threads 2 --paired --gzip-compressed \
         --output temp_${SAMPLE}_${DB_TYPE}_kraken_vs_ref_filtered.tsv  \
-        --report ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv \
+        --report ${SAMPLE}_${DB_TYPE}_kraken_report.tsv \
         ${FASTQ_DIR}/${SAMPLE}${R1_SUFFIX} ${FASTQ_DIR}/${SAMPLE}${R2_SUFFIX}
     echo -e "\t### Identifying matches between unaligned reads and kraken2 $DB_TYPE database ### - END: $(date)"
     
@@ -88,11 +88,11 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     echo -e "\t### Filtering out species from kraken2 $DB_TYPE results ### - START: $(date)"
     ### Bacteria and Fungi analysis before January 11, 2021 used direct kraken reads >= 50 without subspecies (only S, not S1)
     if [ $SUBSPECIES -eq 1 ]; then
-        cat ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv | \
+        cat ${SAMPLE}_${DB_TYPE}_kraken_report.tsv | \
             awk -v pat=$MIN_KRAKEN_READS '{ if ($3 >= pat && ($4 == "S" || $4 == "S1")) { print } }' | \
             tr -s '  ' ' ' | sed 's/^[ ]*//' > temp_${SAMPLE}_${DB_TYPE}_kraken_species.tsv
     else
-        cat ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv | \
+        cat ${SAMPLE}_${DB_TYPE}_kraken_report.tsv | \
             awk -v pat=$MIN_KRAKEN_READS '{ if ($3 >= pat && $4 == "S") { print } }' | \
             tr -s '  ' ' ' | sed 's/^[ ]*//' > temp_${SAMPLE}_${DB_TYPE}_kraken_species.tsv
     fi
@@ -137,10 +137,10 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
             echo -e "\t\tSpecies contigs built"
             
-            grep ">" temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${IDENTIFY}.${SAMPLE}_contig_data.tsv
+            grep ">" temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${SAMPLE}_contig_data.tsv
             echo -e "\t\tSaved contig data"
             
-            grep ">" temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${IDENTIFY}.${SAMPLE}_scaffold_data.tsv
+            grep ">" temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${SAMPLE}_scaffold_data.tsv
             echo -e "\t\tSaved scaffold data"
             
             bwa index temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta
@@ -157,12 +157,12 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
                 grep "NODE" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_read_targets.txt
             printf "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\n%0.s" $(seq $(cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_read_targets.txt | wc -l)) | \
                 paste - temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_read_targets.txt | uniq -c | \
-                sed 's/^[[:space:]]*//' | tr -s ' ' '\t' >> ${IDENTIFY}.${SAMPLE}_kraken_contig_read_targets.tsv
+                sed 's/^[[:space:]]*//' | tr -s ' ' '\t' >> ${SAMPLE}_kraken_contig_read_targets.tsv
             echo -e "\t\tCollected read-to-contig target data"
             
             CONTIG_ALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_aligned.bam | cut -f 3 | grep "NODE" | wc -l)
             CONTIG_UNALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_aligned.bam | cut -f 3 | grep -v "NODE" | wc -l)
-            echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$CONTIG_ALIGNED_READS\t$CONTIG_UNALIGNED_READS" >> ${IDENTIFY}.${SAMPLE}_kraken_contig_read_target_counts.tsv
+            echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$CONTIG_ALIGNED_READS\t$CONTIG_UNALIGNED_READS" >> ${SAMPLE}_kraken_contig_read_target_counts.tsv
             echo -e "\t\tCollected read-to-contig target counts"
             
             bwa index temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
@@ -179,12 +179,12 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
                 grep "NODE" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt
             printf "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\n%0.s" $(seq $(cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt | wc -l)) | \
                 paste - temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt | uniq -c | \
-                sed 's/^[[:space:]]*//' | tr -s ' ' '\t' >> ${IDENTIFY}.${SAMPLE}_kraken_scaffold_read_targets.tsv
+                sed 's/^[[:space:]]*//' | tr -s ' ' '\t' >> ${SAMPLE}_kraken_scaffold_read_targets.tsv
             echo -e "\t\tCollected read-to-scaffold target data"
             
             SCAFFOLD_ALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | grep "NODE" | wc -l)
             SCAFFOLD_UNALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | grep -v "NODE" | wc -l)
-            echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$SCAFFOLD_ALIGNED_READS\t$SCAFFOLD_UNALIGNED_READS" >> ${IDENTIFY}.${SAMPLE}_kraken_scaffold_read_target_counts.tsv
+            echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$SCAFFOLD_ALIGNED_READS\t$SCAFFOLD_UNALIGNED_READS" >> ${SAMPLE}_kraken_scaffold_read_target_counts.tsv
             echo -e "\t\tCollected read-to-scaffold target counts"
         else
             ${TOOLS_DIR}/BBTools/bbmap_38.87/dedupe.sh \
@@ -246,20 +246,24 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     
     
     echo -e "\t### Consolidating final species files for $DB_TYPE results ### - START: $(date)"
-    BLAST_FILENAMES=( $(ls ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_*_blast.tsv) )
-    head -n 1 ${BLAST_FILENAMES[0]} > ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-    for i in ${BLAST_FILENAMES[@]}; do
-        tail -n +2 $i >> ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-    done
-    if [ $(cat ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv | wc -l) -le 1 ]; then
-        rm ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+    BLAST_FILENAMES=( $(ls ${SAMPLE}_${DB_TYPE}_kraken_*_blast.tsv) )
+    if [ ${#BLAST_FILENAMES[@]} -eq 0 ]; then
+        echo -e "\tWARNING: No blast results found"
     else
-        python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
-            -b ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_blast.tsv \
-            -k ${IDENTIFY}.${SAMPLE}_${DB_TYPE}_kraken_report.tsv
+        head -n 1 ${BLAST_FILENAMES[0]} > ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+        for i in ${BLAST_FILENAMES[@]}; do
+            tail -n +2 $i >> ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+        done
+        if [ $(cat ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv | wc -l) -le 1 ]; then
+            rm ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
+        else
+            python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
+                -b ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv \
+                -k ${SAMPLE}_${DB_TYPE}_kraken_report.tsv
+        fi
+        echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
+        rm ${BLAST_FILENAMES[@]}
     fi
-    echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
-    rm ${BLAST_FILENAMES[@]}
     echo -e "\t### Consolidating final species files for $DB_TYPE results ### - END: $(date)"
 done
 rm temp_${SAMPLE}_ref_filtered.sam
@@ -268,14 +272,14 @@ rm temp_${SAMPLE}_ref_filtered.sam
 if [ $BLAST_CONTIGS -eq 1 ]; then
     echo "### Consolidating contig alignment metrics ### - START: $(date)"
     CONTIG_ALIGNMENT_METRICS_FILENAMES=( $(ls temp_${SAMPLE}_*_contig_alignment_metrics.tsv) )
-    echo -e "sample\tkraken_db\tspecies_id\t$(sed -n '7p' ${CONTIG_ALIGNMENT_METRICS_FILENAMES[0]})" > ${IDENTIFY}.${SAMPLE}_contig_alignment_metrics.tsv
+    echo -e "sample\tkraken_db\tspecies_id\t$(sed -n '7p' ${CONTIG_ALIGNMENT_METRICS_FILENAMES[0]})" > ${SAMPLE}_contig_alignment_metrics.tsv
     for i in ${CONTIG_ALIGNMENT_METRICS_FILENAMES[@]}; do
         DB_TYPE=$(echo $i | cut -d '_' -f 3)
         SPECIES_ID=$(echo $i | cut -d '_' -f 5)
         R1=$(sed -n '8p' $i)
         R2=$(sed -n '9p' $i)
         PAIR=$(sed -n '10p' $i)
-        echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R1\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R2\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$PAIR\n" >> ${IDENTIFY}.${SAMPLE}_contig_alignment_metrics.tsv
+        echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R1\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R2\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$PAIR\n" >> ${SAMPLE}_contig_alignment_metrics.tsv
     done
     rm ${CONTIG_ALIGNMENT_METRICS_FILENAMES[@]}
     echo "### Consolidating contig alignment metrics ### - END: $(date)"
@@ -283,22 +287,22 @@ if [ $BLAST_CONTIGS -eq 1 ]; then
     
     echo "### Consolidating scaffold alignment metrics ### - START: $(date)"
     SCAFFOLD_ALIGNMENT_METRICS_FILENAMES=( $(ls temp_${SAMPLE}_*_scaffold_alignment_metrics.tsv) )
-    echo -e "sample\tkraken_db\tspecies_id\t$(sed -n '7p' ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[0]})" > ${IDENTIFY}.${SAMPLE}_scaffold_alignment_metrics.tsv
+    echo -e "sample\tkraken_db\tspecies_id\t$(sed -n '7p' ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[0]})" > ${SAMPLE}_scaffold_alignment_metrics.tsv
     for i in ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[@]}; do
         DB_TYPE=$(echo $i | cut -d '_' -f 3)
         SPECIES_ID=$(echo $i | cut -d '_' -f 5)
         R1=$(sed -n '8p' $i)
         R2=$(sed -n '9p' $i)
         PAIR=$(sed -n '10p' $i)
-        echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R1\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R2\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$PAIR\n" >> ${IDENTIFY}.${SAMPLE}_scaffold_alignment_metrics.tsv
+        echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R1\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$R2\n$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t$PAIR\n" >> ${SAMPLE}_scaffold_alignment_metrics.tsv
     done
     rm ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[@]}
     echo "### Consolidating scaffold alignment metrics ### - END: $(date)"
 fi
 
 
-if [ ! -f ${IDENTIFY}.${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv ]; then
-    echo "Final file ${IDENTIFY}.${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv not found. Exiting with code 1"
+if [ ! -f ${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv ]; then
+    echo "Final file ${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv not found. Exiting with code 1"
     exit 1
 fi
 echo -e "END: $(date)\nRuntime: $(($(date +%s)-$START_TIME)) seconds"

@@ -121,7 +121,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
         
         if [ $BLAST_CONTIGS -eq 1 ]; then
             mkdir spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
-            python3 /oak/stanford/groups/cgawad/${TOOLS_DIR}/SPAdes-3.14.0-Linux/bin/spades.py \
+            python3 ${TOOLS_DIR}/SPAdes-3.14.0-Linux/bin/spades.py \
                 -t 2 -m 32 -1 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} -2 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} \
                 -o spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID} 1>&2
             if [ ! -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/contigs.fasta ]; then

@@ -165,14 +165,9 @@ if [ -z $FASTQ_DIR ]; then
 elif [ -z $RESULTS_DIR ]; then
     RESULTS_DIR="${FASTQ_DIR}/$(date '+%Y-%m-%d')_${PROJECT}_Results"
 fi
-if [ ! -z $SCRATCH_DIR ] && [ $SKIP_SCRATCH -eq 1 ]; then
-    echo "Variables not supplied correctly. Cannot skip scratch while being provided scratch_dir for use. Exiting with code 1"
-    exit 1
-fi
 if [ -z $SCRATCH_DIR ] && [ $SKIP_SCRATCH -eq 0 ]; then
     SCRATCH_DIR="/scratch/groups/cgawad/$(date '+%Y-%m-%d')_${PROJECT}_Scratch"
-fi
-if [ -z $SCRATCH_DIR ] && [ $SKIP_SCRATCH -eq 1 ]; then
+elif [ $SKIP_SCRATCH -eq 1 ]; then
     SCRATCH_DIR="$RESULTS_DIR"
 fi
 if [ -z $STD_ERR_OUT_DIR ]; then
@@ -550,7 +545,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.contig_alignment_metrics.tsv
         done
         rm ${CONTIG_ALIGNMENT_METRICS_FILENAMES[@]}
-        echo -e "Consolidated contig alignment metrics"
+        echo -e "Consolidated contig alignment metrics" >> $PIPELINE_STATUS
         
         CONTIG_READ_TARGET_COUNTS_FILENAMES=( $(ls *_kraken_contig_read_target_counts.tsv) )
         sed -n '1p' ${CONTIG_READ_TARGET_COUNTS_FILENAMES[0]} > ${IDENTIFY}.kraken_contig_read_target_counts.tsv
@@ -558,7 +553,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.kraken_contig_read_target_counts.tsv
         done
         rm ${CONTIG_READ_TARGET_COUNTS_FILENAMES[@]}
-        echo -e "Consolidated contig read target counts"
+        echo -e "Consolidated contig read target counts" >> $PIPELINE_STATUS
         
         CONTIG_READ_TARGETS_FILENAMES=( $(ls *_kraken_contig_read_targets.tsv) )
         sed -n '1p' ${CONTIG_READ_TARGETS_FILENAMES[0]} > ${IDENTIFY}.kraken_contig_read_targets.tsv
@@ -566,7 +561,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.kraken_contig_read_targets.tsv
         done
         rm ${CONTIG_READ_TARGETS_FILENAMES[@]}
-        echo -e "Consolidated contig read targets"
+        echo -e "Consolidated contig read targets" >> $PIPELINE_STATUS
         
         CONTIG_DATA_FILENAMES=( $(ls *_contig_data.tsv) )
         sed -n '1p' ${CONTIG_DATA_FILENAMES[0]} > ${IDENTIFY}.contig_data.tsv
@@ -574,7 +569,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.contig_data.tsv
         done
         rm ${CONTIG_DATA_FILENAMES[@]}
-        echo -e "Consolidated contig read targets"
+        echo -e "Consolidated contig read targets" >> $PIPELINE_STATUS
         
         SCAFFOLD_ALIGNMENT_METRICS_FILENAMES=( $(ls *_scaffold_alignment_metrics.tsv) )
         sed -n '1p' ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[0]} > ${IDENTIFY}.scaffold_alignment_metrics.tsv
@@ -582,7 +577,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.scaffold_alignment_metrics.tsv
         done
         rm ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[@]}
-        echo -e "Consolidated scaffold alignment metrics"
+        echo -e "Consolidated scaffold alignment metrics" >> $PIPELINE_STATUS
         
         SCAFFOLD_READ_TARGET_COUNTS_FILENAMES=( $(ls *_kraken_scaffold_read_target_counts.tsv) )
         sed -n '1p' ${SCAFFOLD_READ_TARGET_COUNTS_FILENAMES[0]} > ${IDENTIFY}.kraken_scaffold_read_target_counts.tsv
@@ -590,7 +585,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.kraken_scaffold_read_target_counts.tsv
         done
         rm ${SCAFFOLD_READ_TARGET_COUNTS_FILENAMES[@]}
-        echo -e "Consolidated scaffold read target counts"
+        echo -e "Consolidated scaffold read target counts" >> $PIPELINE_STATUS
         
         SCAFFOLD_READ_TARGETS_FILENAMES=( $(ls *_kraken_scaffold_read_targets.tsv) )
         sed -n '1p' ${SCAFFOLD_READ_TARGETS_FILENAMES[0]} > ${IDENTIFY}.kraken_scaffold_read_targets.tsv
@@ -598,7 +593,7 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.kraken_scaffold_read_targets.tsv
         done
         rm ${SCAFFOLD_READ_TARGETS_FILENAMES[@]}
-        echo -e "Consolidated scaffold read targets"
+        echo -e "Consolidated scaffold read targets" >> $PIPELINE_STATUS
         
         SCAFFOLD_DATA_FILENAMES=( $(ls *_scaffold_data.tsv) )
         sed -n '1p' ${SCAFFOLD_DATA_FILENAMES[0]} > ${IDENTIFY}.scaffold_data.tsv
@@ -606,7 +601,31 @@ elif [ $STEP -eq 3 ]; then
             tail -n +2 $i >> ${IDENTIFY}.scaffold_data.tsv
         done
         rm ${SCAFFOLD_DATA_FILENAMES[@]}
-        echo -e "Consolidated scaffold read targets"
+        echo -e "Consolidated scaffold read targets" >> $PIPELINE_STATUS
+
+        KRAKEN_CONTIG_BLAST_FILENAMES=( $(ls *_kraken_contig_*_blast.tsv) )
+        sed -n '1p' ${KRAKEN_CONTIG_BLAST_FILENAMES[0]} > ${IDENTIFY}.kraken_contig_blast.tsv
+        for i in ${KRAKEN_CONTIG_BLAST_FILENAMES[@]}; do
+            tail -n +2 $i >> ${IDENTIFY}.kraken_contig_blast.tsv
+        done
+        rm ${KRAKEN_CONTIG_BLAST_FILENAMES[@]}
+        echo -e "Consolidated kraken contig blast results" >> $PIPELINE_STATUS
+
+        KRAKEN_SCAFFOLD_BLAST_FILENAMES=( $(ls *_kraken_scaffold_*_blast.tsv) )
+        sed -n '1p' ${KRAKEN_SCAFFOLD_BLAST_FILENAMES[0]} > ${IDENTIFY}.kraken_scaffold_blast.tsv
+        for i in ${KRAKEN_SCAFFOLD_BLAST_FILENAMES[@]}; do
+            tail -n +2 $i >> ${IDENTIFY}.kraken_scaffold_blast.tsv
+        done
+        rm ${KRAKEN_SCAFFOLD_BLAST_FILENAMES[@]}
+        echo -e "Consolidated kraken scaffold blast results" >> $PIPELINE_STATUS
+    else
+        KRAKEN_BLAST_FILENAMES=( $(ls *_kraken_*_blast.tsv) )
+        sed -n '1p' ${KRAKEN_BLAST_FILENAMES[0]} > ${IDENTIFY}.kraken_blast.tsv
+        for i in ${KRAKEN_BLAST_FILENAMES[@]}; do
+            tail -n +2 $i >> ${IDENTIFY}.kraken_blast.tsv
+        done
+        rm ${KRAKEN_BLAST_FILENAMES[@]}
+        echo -e "Consolidated kraken blast results" >> $PIPELINE_STATUS
     fi
     
     KRAKEN_REPORT_FILENAMES=( $(ls *_kraken_report.tsv) )
@@ -618,15 +637,7 @@ elif [ $STEP -eq 3 ]; then
         cat $i | sed 's/^ \+/'${SAMPLE}'\t'${DB_TYPE}'\t/' >> ${IDENTIFY}.kraken_reports.tsv
     done
     rm ${KRAKEN_REPORT_FILENAMES[@]}
-    echo -e "Consolidated kraken reports"
-    
-    KRAKEN_BLAST_FILENAMES=( $(ls *_kraken_*_blast.tsv) )
-    sed -n '1p' ${KRAKEN_BLAST_FILENAMES[0]} > ${IDENTIFY}.kraken_blast.tsv
-    for i in ${KRAKEN_BLAST_FILENAMES[@]}; do
-        tail -n +2 $i >> ${IDENTIFY}.kraken_blast.tsv
-    done
-    # rm ${KRAKEN_BLAST_FILENAMES[@]}
-    echo -e "Consolidated kraken blast results"
+    echo -e "Consolidated kraken reports" >> $PIPELINE_STATUS
     echo "### Consolidating files ### - END: $(date)" >> $PIPELINE_STATUS
     
     

@@ -41,7 +41,7 @@ blast_function () {
     local LOCAL_QUERY=$2
     local LOCAL_KRAKEN_DB=$3
     local LOCAL_SPECIES_ID=$4
-    local LOCAL_JSON=$(echo $LOCAL_QUERY | sed "s/.fasta/_${LOCAL_BLAST_DB}_blast.json/")
+    local LOCAL_JSON=$(echo $LOCAL_QUERY | sed "s/contigs/contig/" | sed "s/scaffolds/scaffold/" | sed "s/.fasta/_${LOCAL_BLAST_DB}_blast.json/")
     local LOCAL_TSV=$(echo $LOCAL_JSON | sed "s/.json/.tsv/" | sed "s/temp_//")
     
     export BLASTDB=${NCBI_DB_DIR_PREFIX}${LOCAL_BLAST_DB}
@@ -60,6 +60,29 @@ blast_function () {
     echo -e "\t\t\tSpecies blast results processed"
     
     rm $LOCAL_JSON
+}
+
+consolidate_blast_function () {
+    local LOCAL_SUFFIX=$1
+
+    BLAST_FILENAMES=( $(ls ${SAMPLE}_${DB_TYPE}_kraken_*_${LOCAL_SUFFIX}blast.tsv) )
+    if [ ${#BLAST_FILENAMES[@]} -eq 0 ]; then
+        echo -e "\tWARNING: No blast results found"
+    else
+        head -n 1 ${BLAST_FILENAMES[0]} > ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv
+        for i in ${BLAST_FILENAMES[@]}; do
+            tail -n +2 $i >> ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv
+        done
+        if [ $(cat ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv | wc -l) -le 1 ]; then
+            rm ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv
+        else
+            python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
+                -b ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv \
+                -k ${SAMPLE}_${DB_TYPE}_kraken_report.tsv
+        fi
+        echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
+        rm ${BLAST_FILENAMES[@]}
+    fi
 }
 
 
@@ -209,10 +232,10 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
         for BLAST_DB_TYPE in ${BLAST_DB_TYPE_ARRAY[@]}; do
             echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
             if [ $BLAST_CONTIGS -eq 1 ]; then
-                blast_function $BLAST_DB_TYPE temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta $DB_TYPE $SPECIES_ID
-            else
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta $DB_TYPE $SPECIES_ID
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta $DB_TYPE $SPECIES_ID
+            else
+                blast_function $BLAST_DB_TYPE temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta $DB_TYPE $SPECIES_ID
             fi
             COUNT_BLAST_DB_TYPE=$((COUNT_BLAST_DB_TYPE+1))
         done
@@ -246,23 +269,11 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     
     
     echo -e "\t### Consolidating final species files for $DB_TYPE results ### - START: $(date)"
-    BLAST_FILENAMES=( $(ls ${SAMPLE}_${DB_TYPE}_kraken_*_blast.tsv) )
-    if [ ${#BLAST_FILENAMES[@]} -eq 0 ]; then
-        echo -e "\tWARNING: No blast results found"
+    if [ $BLAST_CONTIGS -eq 1 ]; then
+        consolidate_blast_function contig_
+        consolidate_blast_function scaffold_
     else
-        head -n 1 ${BLAST_FILENAMES[0]} > ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-        for i in ${BLAST_FILENAMES[@]}; do
-            tail -n +2 $i >> ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-        done
-        if [ $(cat ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv | wc -l) -le 1 ]; then
-            rm ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv
-        else
-            python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
-                -b ${SAMPLE}_${DB_TYPE}_kraken_blast.tsv \
-                -k ${SAMPLE}_${DB_TYPE}_kraken_report.tsv
-        fi
-        echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
-        rm ${BLAST_FILENAMES[@]}
+        consolidate_blast_function
     fi
     echo -e "\t### Consolidating final species files for $DB_TYPE results ### - END: $(date)"
 done

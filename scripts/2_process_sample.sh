@@ -55,11 +55,12 @@ blast_function () {
     
     Rscript ${SCRIPT_DIR}/process_blast_tsv.R $LOCAL_TSV $ALIGN_MINIMUM
     if [ $(cat $LOCAL_TSV | wc -l) -le 1 ]; then
-        rm $LOCAL_TSV
+        echo -e "\t\t\tWARNING: No blast results found"
+        # rm $LOCAL_TSV
     fi
     echo -e "\t\t\tSpecies blast results processed"
-    
-    rm $LOCAL_JSON
+
+    # rm $LOCAL_JSON
 }
 
 consolidate_blast_function () {
@@ -73,15 +74,11 @@ consolidate_blast_function () {
         for i in ${BLAST_FILENAMES[@]}; do
             tail -n +2 $i >> ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv
         done
-        if [ $(cat ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv | wc -l) -le 1 ]; then
-            rm ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv
-        else
-            python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
-                -b ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv \
-                -k ${SAMPLE}_${DB_TYPE}_kraken_report.tsv
-        fi
+        python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
+            -b ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv \
+            -k ${SAMPLE}_${DB_TYPE}_kraken_report.tsv
         echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
-        rm ${BLAST_FILENAMES[@]}
+        # rm ${BLAST_FILENAMES[@]}
     fi
 }
 
@@ -146,7 +143,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             mkdir spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}
             python3 ${TOOLS_DIR}/SPAdes-3.14.0-Linux/bin/spades.py \
                 -t 2 -m 32 -1 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} -2 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} \
-                -o spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID} 1>&2
+                -o spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID} &>/dev/null
             if [ ! -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/contigs.fasta ]; then
                 echo -e "\t\tWARNING: No contigs made, skipping rest of this kraken species"
                 rm -r spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}

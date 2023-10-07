@@ -18,25 +18,24 @@ json_file = open(args.input, "r")
 blastn_dict = json.load(json_file)
 json_file.close()
 for blast_result in blastn_dict['BlastOutput2']:
-    query_name = blast_result['report']['results']['search']['query_title'].split("/")[0]
-    read = blast_result['report']['results']['search']['query_title'].split("/")[1]
+    query_name = blast_result['report']['results']['search']['query_title']
     query_length = blast_result['report']['results']['search']['query_len']
     hits = blast_result['report']['results']['search']['hits']
     if len(hits) > 0:
         for hit_count in range(len(hits)):
             hit =  hits[hit_count]
             if args.blast_db == "plasmid":
-                new_addition = [hit_count + 1, query_name, query_length, read, 
+                new_addition = [hit_count + 1, query_name, query_length, 
                                 hit['description'][0]['title'], hit['description'][0]['accession'], 
                                 hit['hsps'][0]['align_len'], hit['len'], (hit['hsps'][0]['align_len']/query_length)*100,
                                 hit['hsps'][0]['hit_from'], hit['hsps'][0]['hit_to']]
             elif args.blast_db == "viral":
-                new_addition = [hit_count + 1, query_name, query_length, read,
+                new_addition = [hit_count + 1, query_name, query_length,
                                 hit['description'][0]['title'], hit['description'][0]['accession'], 
                                 hit['hsps'][0]['align_len'], hit['len'], (hit['hsps'][0]['align_len']/query_length)*100,
                                 hit['hsps'][0]['hit_from'], hit['hsps'][0]['hit_to']]
             else:
-                new_addition = [hit_count + 1, query_name, query_length, read,
+                new_addition = [hit_count + 1, query_name, query_length,
                                 hit['description'][0]['sciname'], hit['description'][0]['sciname'].split(" ")[0],
                                 hit['description'][0]['taxid'], hit['description'][0]['accession'], 
                                 hit['hsps'][0]['align_len'], hit['len'], (hit['hsps'][0]['align_len']/query_length)*100,
@@ -49,15 +48,15 @@ if len(blast_hits_list) > 0:
     print("{} blast hits found".format(len(blast_hits_list)))
     if args.blast_db == "plasmid":
         blast_results_df = pd.DataFrame(blast_hits_list, 
-                                    columns=['hit_rank', 'query', 'query_length', 'read', 'blast_plasmid', 'accession', 
+                                    columns=['hit_rank', 'query', 'query_length', 'blast_plasmid', 'accession', 
                                     'top_alignment_length', 'reference_length', 'percent_aligned', 'hit_from', 'hit_to'])
     elif args.blast_db == "viral":
         blast_results_df = pd.DataFrame(blast_hits_list, 
-                                    columns=['hit_rank', 'query', 'query_length', 'read', 'blast_virus', 'accession', 
+                                    columns=['hit_rank', 'query', 'query_length', 'blast_virus', 'accession', 
                                     'top_alignment_length', 'reference_length', 'percent_aligned', 'hit_from', 'hit_to'])
     else:
         blast_results_df = pd.DataFrame(blast_hits_list, 
-                                        columns=['hit_rank', 'query', 'query_length', 'read', 'blast_species', 'blast_genus',
+                                        columns=['hit_rank', 'query', 'query_length', 'blast_species', 'blast_genus',
                                         'hit_taxid', 'accession', 'top_alignment_length', 'reference_length', 'percent_aligned',
                                         'hit_from', 'hit_to'])
     blast_results_df = blast_results_df.assign(blast_db=args.blast_db)

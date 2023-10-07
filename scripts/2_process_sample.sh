@@ -56,11 +56,11 @@ blast_function () {
     Rscript ${SCRIPT_DIR}/process_blast_tsv.R $LOCAL_TSV $ALIGN_MINIMUM
     if [ $(cat $LOCAL_TSV | wc -l) -le 1 ]; then
         echo -e "\t\t\tWARNING: No blast results found"
-        # rm $LOCAL_TSV
+        rm $LOCAL_TSV
     fi
     echo -e "\t\t\tSpecies blast results processed"
 
-    # rm $LOCAL_JSON
+    rm $LOCAL_JSON
 }
 
 consolidate_blast_function () {

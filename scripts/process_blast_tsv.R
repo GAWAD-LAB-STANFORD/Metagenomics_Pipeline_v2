@@ -13,11 +13,10 @@ df <- read_tsv(blast_tsv)
 tryCatch({
   df <- df %>%
     filter(percent_aligned >= align_minimum) %>%
-    filter(hit_taxid == kraken_species_id) %>%
     group_by(query, accession) %>%
       mutate(max_read_pair_length = max(hit_to, hit_from) - min(hit_to, hit_from)) %>%
-      filter(length(unique(read)) == 2) %>%
-    ungroup()
+    ungroup() %>%
+    arrange(hit_rank)
   df <- df[!duplicated(df[c("query", "blast_species")]),]
   cat(nrow(df), "blast results after filtering\n")
   write_tsv(df, blast_tsv)

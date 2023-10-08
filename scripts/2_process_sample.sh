@@ -52,17 +52,22 @@ blast_function () {
     python3 ${SCRIPT_DIR}/blast_json_to_tsv.py \
         -i $LOCAL_JSON -o $LOCAL_TSV -b $LOCAL_BLAST_DB -s $SAMPLE -k $LOCAL_KRAKEN_DB -d $LOCAL_SPECIES_ID
     echo -e "\t\t\tSpecies blast results converted from json to tsv"
-    
-    Rscript ${SCRIPT_DIR}/process_blast_tsv.R $LOCAL_TSV $ALIGN_MINIMUM
     if [ $(cat $LOCAL_TSV | wc -l) -le 1 ]; then
-        echo -e "\t\t\tWARNING: No blast results found"
+        echo -e "\t\t\tWARNING: No blast hits found in blast json"
         rm $LOCAL_TSV
+    else
+        Rscript ${SCRIPT_DIR}/process_blast_tsv.R $LOCAL_TSV $ALIGN_MINIMUM
+        echo -e "\t\t\tSpecies blast results processed"
+        if [ $(cat $LOCAL_TSV | wc -l) -le 1 ]; then
+            echo -e "\t\t\tWARNING: No blast results after filtering by alignment minimum of $ALIGN_MINIMUM"
+            rm $LOCAL_TSV
+        else
+            local LOCAL_COUNT=$(cat $LOCAL_TSV | wc -l)
+            echo -e "\t\t\t$(($LOCAL_COUNT-1)) blast results after filtering"
+        fi
     fi
-    echo -e "\t\t\tSpecies blast results processed"
-
     rm $LOCAL_JSON
 }
-
 consolidate_blast_function () {
     local LOCAL_SUFFIX=$1
 
@@ -154,7 +159,6 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
                 continue
             fi
             mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/contigs.fasta temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta
-            mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
             echo -e "\t\tSpecies contigs built"
             
             grep ">" temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${SAMPLE}_contig_data.tsv
@@ -185,27 +189,34 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$CONTIG_ALIGNED_READS\t$CONTIG_UNALIGNED_READS" >> ${SAMPLE}_kraken_contig_read_target_counts.tsv
             echo -e "\t\tCollected read-to-contig target counts"
             
-            bwa index temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
-            bwa mem -M temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta \
-                temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} | \
-                samtools view -b - | samtools sort -o temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam -
-            echo -e "\t\tAligned reads to scaffolds"
-            
-            gatk --java-options "-XX:+UseParallelGC -XX:ParallelGCThreads=4 -Xmx64g" CollectAlignmentSummaryMetrics \
-                -R temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta -I temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam -O temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_alignment_metrics.tsv 1>&2
-            echo -e "\t\tCollected read-to-scaffold alignment metrics"
-            
-            samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | \
-                grep "NODE" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt
-            printf "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\n%0.s" $(seq $(cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt | wc -l)) | \
-                paste - temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt | uniq -c | \
-                sed 's/^[[:space:]]*//' | tr -s ' ' '\t' >> ${SAMPLE}_kraken_scaffold_read_targets.tsv
-            echo -e "\t\tCollected read-to-scaffold target data"
-            
-            SCAFFOLD_ALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | grep "NODE" | wc -l)
-            SCAFFOLD_UNALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | grep -v "NODE" | wc -l)
-            echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$SCAFFOLD_ALIGNED_READS\t$SCAFFOLD_UNALIGNED_READS" >> ${SAMPLE}_kraken_scaffold_read_target_counts.tsv
-            echo -e "\t\tCollected read-to-scaffold target counts"
+            if [ ! -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
+                echo -e "\t\tWARNING: No scaffolds made"
+            else
+                mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
+                echo -e "\t\tSpecies scaffolds built"
+                
+                bwa index temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
+                bwa mem -M temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta \
+                    temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} | \
+                    samtools view -b - | samtools sort -o temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam -
+                echo -e "\t\tAligned reads to scaffolds"
+                
+                gatk --java-options "-XX:+UseParallelGC -XX:ParallelGCThreads=4 -Xmx64g" CollectAlignmentSummaryMetrics \
+                    -R temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta -I temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam -O temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_alignment_metrics.tsv 1>&2
+                echo -e "\t\tCollected read-to-scaffold alignment metrics"
+                
+                samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | \
+                    grep "NODE" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt
+                printf "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\n%0.s" $(seq $(cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt | wc -l)) | \
+                    paste - temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt | uniq -c | \
+                    sed 's/^[[:space:]]*//' | tr -s ' ' '\t' >> ${SAMPLE}_kraken_scaffold_read_targets.tsv
+                echo -e "\t\tCollected read-to-scaffold target data"
+                
+                SCAFFOLD_ALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | grep "NODE" | wc -l)
+                SCAFFOLD_UNALIGNED_READS=$(samtools view temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam | cut -f 3 | grep -v "NODE" | wc -l)
+                echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$SCAFFOLD_ALIGNED_READS\t$SCAFFOLD_UNALIGNED_READS" >> ${SAMPLE}_kraken_scaffold_read_target_counts.tsv
+                echo -e "\t\tCollected read-to-scaffold target counts"
+            fi
         else
             ${TOOLS_DIR}/BBTools/bbmap_38.87/dedupe.sh \
                 in=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} \
@@ -230,7 +241,9 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
             if [ $BLAST_CONTIGS -eq 1 ]; then
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta $DB_TYPE $SPECIES_ID
-                blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta $DB_TYPE $SPECIES_ID
+                if [ -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
+                    blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta $DB_TYPE $SPECIES_ID
+                fi
             else
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta $DB_TYPE $SPECIES_ID
             fi
@@ -246,11 +259,13 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_aligned.bam
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_aligned.bam.bai
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_read_targets.txt
-            rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam
-            rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam.bai
-            rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt
             rm temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta*
-            rm temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta*
+            if [ -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
+                rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam
+                rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam.bai
+                rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt
+                rm temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta*
+            fi
         else
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}.fasta*
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R2_raw.fasta

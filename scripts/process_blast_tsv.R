@@ -18,11 +18,9 @@ tryCatch({
     ungroup() %>%
     arrange(hit_rank)
   df <- df[!duplicated(df[c("query", "blast_species")]),]
-  cat(nrow(df), "blast results after filtering\n")
   write_tsv(df, blast_tsv)
 }, error = function(err) {
   df <- data.frame(matrix(ncol = length(column_names), nrow = 0))
   colnames(df) <- column_names
-  cat(nrow(df), "blast results after filtering\n")
   write_tsv(df, blast_tsv)
 })

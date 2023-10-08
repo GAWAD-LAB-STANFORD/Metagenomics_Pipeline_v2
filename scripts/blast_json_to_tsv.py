@@ -45,7 +45,7 @@ for blast_result in blastn_dict['BlastOutput2']:
 
 
 if len(blast_hits_list) > 0:
-    print("{} blast hits found".format(len(blast_hits_list)))
+    print("\t\t\t{} blast hits found".format(len(blast_hits_list)))
     if args.blast_db == "plasmid":
         blast_results_df = pd.DataFrame(blast_hits_list, 
                                     columns=['hit_rank', 'query', 'query_length', 'blast_plasmid', 'accession', 
@@ -67,5 +67,3 @@ if len(blast_hits_list) > 0:
     if len(args.kraken_species_id) > 0:
         blast_results_df = blast_results_df.assign(kraken_species_id=args.kraken_species_id)
     blast_results_df.to_csv(args.output, header = True, index = False, sep="\t")
-else:
-    print("No blast hits found in BLAST JSON")

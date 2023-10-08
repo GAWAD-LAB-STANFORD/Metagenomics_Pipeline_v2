@@ -221,6 +221,8 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             ${TOOLS_DIR}/BBTools/bbmap_38.87/dedupe.sh \
                 in=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} \
                 out=temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta s=3
+            echo -e "\t\tSpecies duplicates removed from fastqs"
+            
             awk 'NR % 3 == 1' temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1.fasta | \
                 sed 's/>//g' | sed "s/.$/2/g" > temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_R1_header
             zcat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} | \

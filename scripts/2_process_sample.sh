@@ -71,7 +71,7 @@ blast_function () {
 consolidate_blast_function () {
     local LOCAL_SUFFIX=$1
 
-    BLAST_FILENAMES=( $(ls ${SAMPLE}_${DB_TYPE}_kraken_*_${LOCAL_SUFFIX}blast.tsv) )
+    BLAST_FILENAMES=( $(ls ${SAMPLE}_${DB_TYPE}_kraken_*_${LOCAL_SUFFIX}*_blast.tsv) )
     if [ ${#BLAST_FILENAMES[@]} -eq 0 ]; then
         echo -e "\tWARNING: No blast results found"
     else
@@ -243,7 +243,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
             if [ $BLAST_CONTIGS -eq 1 ]; then
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta $DB_TYPE $SPECIES_ID
-                if [ -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
+                if [ -f temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta ]; then
                     blast_function $BLAST_DB_TYPE temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta $DB_TYPE $SPECIES_ID
                 fi
             else
@@ -262,7 +262,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_aligned.bam.bai
             rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contig_read_targets.txt
             rm temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta*
-            if [ -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
+            if [ -f temp_${SAMPLE}.${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta ]; then
                 rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam
                 rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_aligned.bam.bai
                 rm temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffold_read_targets.txt

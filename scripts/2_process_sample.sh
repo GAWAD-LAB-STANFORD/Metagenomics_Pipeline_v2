@@ -111,7 +111,6 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
     
     
     echo -e "\t### Filtering out species from kraken2 $DB_TYPE results ### - START: $(date)"
-    ### Bacteria and Fungi analysis before January 11, 2021 used direct kraken reads >= 50 without subspecies (only S, not S1)
     if [ $SUBSPECIES -eq 1 ]; then
         cat ${SAMPLE}_${DB_TYPE}_kraken_report.tsv | \
             awk -v pat=$MIN_KRAKEN_READS '{ if ($3 >= pat && ($4 == "S" || $4 == "S1")) { print } }' | \

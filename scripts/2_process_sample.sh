@@ -59,7 +59,7 @@ blast_function () {
         Rscript ${SCRIPT_DIR}/process_blast_tsv.R $LOCAL_TSV $ALIGN_MINIMUM
         echo -e "\t\t\tSpecies blast results processed"
         if [ $(cat $LOCAL_TSV | wc -l) -le 1 ]; then
-            echo -e "\t\t\tWARNING: No blast results after filtering by alignment minimum of $ALIGN_MINIMUM"
+            echo -e "\t\t\tWARNING: No blast hits after filtering by alignment minimum of $ALIGN_MINIMUM"
             rm $LOCAL_TSV
         else
             local LOCAL_COUNT=$(cat $LOCAL_TSV | wc -l)
@@ -71,9 +71,9 @@ blast_function () {
 consolidate_blast_function () {
     local LOCAL_SUFFIX=$1
 
-    BLAST_FILENAMES=( $(ls temp_${SAMPLE}_${DB_TYPE}_kraken_*_${LOCAL_SUFFIX}*_blast.tsv) )
+    BLAST_FILENAMES=( $(ls temp_${SAMPLE}_${DB_TYPE}_kraken_*_${LOCAL_SUFFIX}*_blast.tsv &>/dev/null) )
     if [ ${#BLAST_FILENAMES[@]} -eq 0 ]; then
-        echo -e "\tWARNING: No blast results found"
+        echo -e "\tWARNING: No species blast tsv files found for consolidation"
     else
         head -n 1 ${BLAST_FILENAMES[0]} > ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv
         for i in ${BLAST_FILENAMES[@]}; do
@@ -82,7 +82,7 @@ consolidate_blast_function () {
         python3 ${SCRIPT_DIR}/merge_kraken_blast.py \
             -b ${SAMPLE}_${DB_TYPE}_kraken_${LOCAL_SUFFIX}blast.tsv \
             -k ${SAMPLE}_${DB_TYPE}_kraken_report.tsv
-        echo "${#BLAST_FILENAMES[@]} species blast json files consolidated"
+        echo "${#BLAST_FILENAMES[@]} species blast tsv files consolidated"
         rm ${BLAST_FILENAMES[@]}
     fi
 }

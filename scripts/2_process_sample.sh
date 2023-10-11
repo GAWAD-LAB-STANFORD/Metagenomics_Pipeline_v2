@@ -164,9 +164,6 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             grep ">" temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${SAMPLE}_contig_data.tsv
             echo -e "\t\tSaved contig data"
             
-            grep ">" temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${SAMPLE}_scaffold_data.tsv
-            echo -e "\t\tSaved scaffold data"
-            
             bwa index temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta
             bwa mem -M temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta \
                 temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R1_SUFFIX} temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}${R2_SUFFIX} | \
@@ -189,11 +186,14 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$CONTIG_ALIGNED_READS\t$CONTIG_UNALIGNED_READS" >> ${SAMPLE}_kraken_contig_read_target_counts.tsv
             echo -e "\t\tCollected read-to-contig target counts"
             
-            if [ ! -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
+            if [ $(cat spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta | wc -l) -le 1 ]; then
                 echo -e "\t\tWARNING: No scaffolds made"
             else
                 mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
                 echo -e "\t\tSpecies scaffolds built"
+                
+                grep ">" temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta | sed "s/>//" | xargs -i echo -e "$SAMPLE\t$DB_TYPE\t$SPECIES_ID\t{}" >> ${SAMPLE}_scaffold_data.tsv
+                echo -e "\t\tSaved scaffold data"
                 
                 bwa index temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
                 bwa mem -M temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta \
@@ -243,7 +243,7 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
             if [ $BLAST_CONTIGS -eq 1 ]; then
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta $DB_TYPE $SPECIES_ID
-                if [ -f temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta ]; then
+                if [ $(cat temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta | wc -l) -gt 1 ]; then
                     blast_function $BLAST_DB_TYPE temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta $DB_TYPE $SPECIES_ID
                 fi
             else

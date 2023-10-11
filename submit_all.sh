@@ -28,7 +28,7 @@ Defaults: \n\t\
     min_kraken_reads: 10 \n\t\
     blast_all: off, only blast contigs \n\t\
     blast_db_types: nt \n\t\
-    num_alignments: 250 \n\t\
+    num_alignments: 100 \n\t\
     align_min: 90 \n\n\
 Run after demultiplexing and with fastq directory: \n\t\
     sh ${PIPELINE_DIR}/submit_all.sh --fastq_dir /oak/stanford/groups/cgawad/2020-01-01_Fastqs/ --project 2020-01-01_Project \n\n\
@@ -49,12 +49,12 @@ ONLY_IDENTIFY=0
 SKIP_TRIMMOMATIC=0
 RNA=0
 FILTER_RHESUS=1
-KRAKEN_DB_TYPES="microbial-plasmid-viral"
-MIN_KRAKEN_READS="10"
+KRAKEN_DB_TYPES="microbial"
+MIN_KRAKEN_READS=10
 SUBSPECIES=0
 BLAST_CONTIGS=1
-BLAST_DB_TYPES="nt-plasmid-viral"
-NUM_ALIGNMENTS=250
+BLAST_DB_TYPES="nt"
+NUM_ALIGNMENTS=100
 ALIGN_MINIMUM=90
 STEP=0
 TEMP_ARRAY_START=0
@@ -242,6 +242,12 @@ else
 fi
 if [ "$KRAKEN_DB_TYPES" != "microbial" ]; then
     OPTIONS+=( "--kraken_db_types $KRAKEN_DB_TYPES" )
+fi
+if [ $MIN_KRAKEN_READS -ne 10 ]; then
+    OPTIONS+=( "--min_kraken_reads $MIN_KRAKEN_READS" )
+fi
+if [ $SUBSPECIES -eq 1 ]; then
+    OPTIONS+=( "--subspecies" )
 fi
 if [ $BLAST_CONTIGS -eq 0 ]; then
     OPTIONS+=( "--blast_all" )

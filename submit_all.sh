@@ -439,7 +439,7 @@ elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
             PAIR=$(sed -n '10p' $i)
             echo -e "$SAMPLE\t$REF\t$DB_TYPE\t$R1\n$SAMPLE\t$REF\t$DB_TYPE\t$R2\n$SAMPLE\t$REF\t$DB_TYPE\t$PAIR\n" >> ${PROJECT}.ref_alignment_metrics.tsv
         done
-        # rm ${REF_ALIGNMENT_METRICS_FILENAMES[@]}
+        rm ${REF_ALIGNMENT_METRICS_FILENAMES[@]}
         echo -e "Consolidated ref alignment metrics"
         
         READ_COUNT_FILENAMES=( $(ls *_read_counts.tsv) )
@@ -633,7 +633,7 @@ elif [ $STEP -eq 3 ]; then
         ${IDENTIFY}.kraken_reports.tsv
     for i in ${KRAKEN_REPORT_FILENAMES[@]}; do
         SAMPLE=$(echo $i | cut -d '_' -f 1)
-        DB_TYPE=$(echo $i | cut -d '_' -f 2)
+        DB_TYPE=$(echo $i | sed "s/${SAMPLE}_//" | cut -d '_' -f 1)
         cat $i | sed 's/^ \+/'${SAMPLE}'\t'${DB_TYPE}'\t/' >> ${IDENTIFY}.kraken_reports.tsv
     done
     rm ${KRAKEN_REPORT_FILENAMES[@]}

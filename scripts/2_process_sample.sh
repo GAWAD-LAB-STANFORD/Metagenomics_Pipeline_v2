@@ -185,8 +185,10 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
             echo -e "$SAMPLE\t$READS\t$DB_TYPE\t$SPECIES_ID\t$CONTIG_ALIGNED_READS\t$CONTIG_UNALIGNED_READS" >> ${SAMPLE}_kraken_contig_read_target_counts.tsv
             echo -e "\t\tCollected read-to-contig target counts"
             
-            if [ $(cat spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta | wc -l) -le 1 ]; then
+            if [ ! -f spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta ]; then
                 echo -e "\t\tWARNING: No scaffolds made"
+            elif [ $(cmp temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta) ]; then
+                echo -e "\t\tWARNING: Contigs are the same as scaffolds"
             else
                 mv spades_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}/scaffolds.fasta temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_scaffolds.fasta
                 echo -e "\t\tSpecies scaffolds built"

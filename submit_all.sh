@@ -545,7 +545,7 @@ elif [ $STEP -eq 3 ]; then
     
     echo "### Consolidating files ### - START: $(date)" >> $PIPELINE_STATUS
     if [ $BLAST_CONTIGS -eq 1 ]; then
-        CONTIG_ALIGNMENT_METRICS_FILENAMES=( $(ls *_contig_alignment_metrics.tsv) )
+        CONTIG_ALIGNMENT_METRICS_FILENAMES=( $(ls *_contig_alignment_metrics.tsv | grep -v '^temp_') )
         sed -n '1p' ${CONTIG_ALIGNMENT_METRICS_FILENAMES[0]} > ${IDENTIFY}.contig_alignment_metrics.tsv
         for i in ${CONTIG_ALIGNMENT_METRICS_FILENAMES[@]}; do
             tail -n +2 $i >> ${IDENTIFY}.contig_alignment_metrics.tsv
@@ -577,7 +577,7 @@ elif [ $STEP -eq 3 ]; then
         rm ${CONTIG_DATA_FILENAMES[@]}
         echo -e "Consolidated contig read targets" >> $PIPELINE_STATUS
         
-        SCAFFOLD_ALIGNMENT_METRICS_FILENAMES=( $(ls *_scaffold_alignment_metrics.tsv) )
+        SCAFFOLD_ALIGNMENT_METRICS_FILENAMES=( $(ls *_scaffold_alignment_metrics.tsv | grep -v '^temp_') )
         sed -n '1p' ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[0]} > ${IDENTIFY}.scaffold_alignment_metrics.tsv
         for i in ${SCAFFOLD_ALIGNMENT_METRICS_FILENAMES[@]}; do
             tail -n +2 $i >> ${IDENTIFY}.scaffold_alignment_metrics.tsv

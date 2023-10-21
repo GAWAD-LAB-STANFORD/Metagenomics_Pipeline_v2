@@ -525,8 +525,12 @@ elif [ $STEP -eq 3 ]; then
     KRAKEN_DB_TYPE_ARRAY=( $(echo $KRAKEN_DB_TYPES | sed 's/-/ /g') )
     SAMPLE_COUNT=1
     for SAMPLE in ${SAMPLE_ARRAY[@]}; do
+        TEMP_FILES_ARRAY=( $(ls temp_${SAMPLE}_* ) )
+        NUM_TEMP_FILES=${#TEMP_FILES_ARRAY[@]}
         if [ ! -f ${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv ]; then
             echo -e "\tSample number $SAMPLE_COUNT - ${SAMPLE}.${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv file not found" >> $PIPELINE_STATUS
+        elif [ $NUM_TEMP_FILES -gt 0 ]; then
+            echo -e "\tSample number $SAMPLE_COUNT - $NUM_TEMP_FILES temporary files found, job did not finish" >> $PIPELINE_STATUS
         fi
         SAMPLE_COUNT=$((SAMPLE_COUNT+1))
     done

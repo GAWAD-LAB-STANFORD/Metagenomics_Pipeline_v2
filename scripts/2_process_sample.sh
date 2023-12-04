@@ -26,7 +26,7 @@ ALIGN_MINIMUM=${16}
 SAMPLE_ARRAY=( $(echo ${17} | sed 's/:/ /g') )
 SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 
-echo -e "START: $(date)\nMetagenomics pipeline v2\nResults dir: $SCRATCH_DIR\nSample: $SAMPLE"
+echo -e "START: $(date)\nMetagenomics pipeline v2\nScratch dir: $SCRATCH_DIR\nSample: $SAMPLE"
 cd $SCRATCH_DIR
 
 ml java perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36

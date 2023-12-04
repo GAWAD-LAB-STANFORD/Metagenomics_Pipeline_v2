@@ -19,7 +19,7 @@ REF_NAME_ARRAY=( $(echo $9 | sed 's/:/ /g') )
 SAMPLE_ARRAY=( $(echo ${10} | sed 's/:/ /g') )
 SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
 
-echo -e "START: $(date)\nMetagenomics pipeline v2\nFastq dir: $FASTQ_DIR\nResults dir: $SCRATCH_DIR\nSample: $SAMPLE"
+echo -e "START: $(date)\nMetagenomics pipeline v2\nFastq dir: $FASTQ_DIR\nScratch dir: $SCRATCH_DIR\nSample: $SAMPLE"
 cd $SCRATCH_DIR
 
 ml java/11.0.11 perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36

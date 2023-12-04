@@ -111,16 +111,12 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
     
     NEXT_INDEX=$((REF_INDEX+1))
     if [ $NEXT_INDEX -eq ${#REF_FASTA_ARRAY[@]} ]; then
-        cp ${SAMPLE}_no_${REF_NAME}${R1_SUFFIX} ${SAMPLE}_ref_filtered${R1_SUFFIX}
-        cp ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX} ${SAMPLE}_ref_filtered${R2_SUFFIX}
         cp ${SAMPLE}_no_${REF_NAME}.bam ${SAMPLE}_ref_filtered.bam
         cp ${SAMPLE}_no_${REF_NAME}.bam.bai ${SAMPLE}_ref_filtered.bam.bai
     fi
     rm ${SAMPLE}_no_${REF_NAME}${R1_SUFFIX} ${SAMPLE}_no_${REF_NAME}${R2_SUFFIX}
     rm ${SAMPLE}_no_${REF_NAME}.bam ${SAMPLE}_no_${REF_NAME}.bam.bai
 done
-rm ${SAMPLE}_ref_filtered${R1_SUFFIX}
-rm ${SAMPLE}_ref_filtered${R2_SUFFIX}
 
 if [ ! -f ${SAMPLE}_ref_filtered.bam ]; then
     echo "${SAMPLE}_ref_filtered.bam not found. Exiting with code 1"

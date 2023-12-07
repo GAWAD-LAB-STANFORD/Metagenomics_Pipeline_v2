@@ -7,7 +7,7 @@
 - [TODO and Notes](#todo-and-notes)
 
 ## Purpose
-- This pipeline is built to identify metagenomic species from pair-end fastq.gz files and remove human contamination
+- To identify metagenomic species from pair-end fastq.gz files and remove human contamination
 
 ## How To Run
 - All scripts are controlled by the master script, pipeline_control.sh

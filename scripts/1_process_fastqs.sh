@@ -68,11 +68,15 @@ for ((REF_INDEX = 0 ; REF_INDEX < ${#REF_FASTA_ARRAY[@]} ; REF_INDEX++)); do
         zcat $PREV_R1_FASTQ > $UNZIPPED_R2_FASTQ
         STAR --genomeDir \
             /oak/stanford/groups/cgawad/Reference_Files/GATK_Resource_Bundle_hg38/hg38_STAR_index/ \
-            --runThreadN 2 --readFilesIn $UNZIPPED_R1_FASTQ $UNZIPPED_R2_FASTQ \
-            --outFileNamePrefix $SAMPLE --outSAMtype BAM SortedByCoordinate \
-            --outSAMunmapped Within --outSAMattributes Standard
+            --readFilesIn $UNZIPPED_R1_FASTQ $UNZIPPED_R2_FASTQ \
+            --runThreadN 2 \
+            --outFileNamePrefix $SAMPLE \
+            --outSAMtype BAM SortedByCoordinate \
+            --outSAMunmapped Within \
+            --outSAMattributes Standard
         rm $UNZIPPED_R1_FASTQ $UNZIPPED_R2_FASTQ
         mv ${SAMPLE}Aligned.sortedByCoord.out.bam ${SAMPLE}_${REF_NAME}_aligned.bam
+        samtools index ${SAMPLE}_${REF_NAME}_aligned.bam
         echo "### Aligning RNA fastqs to $REF_NAME ### - END: $(date)"
     else
         echo "### Aligning DNA fastqs to $REF_NAME ### - START: $(date)"

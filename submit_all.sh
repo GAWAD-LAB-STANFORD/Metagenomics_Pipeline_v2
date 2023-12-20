@@ -58,7 +58,8 @@ NUM_ALIGNMENTS=100
 ALIGN_MINIMUM=90
 STEP=0
 TEMP_ARRAY_START=0
-DEPENDENCIES=()
+DEPENDENCY=""
+DEPENDER=""
 while [ "$1" != "" ]; do
     case $1 in
         -h | --help )           echo -e $HELP
@@ -371,15 +372,16 @@ if [ $STEP -eq 0 ] && [ ! -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     echo -e "\nsbatch --parsable -e ${STD_ERR_OUT_DIR}/%A_%x.err -o ${STD_ERR_OUT_DIR}/%A_%x.out \
         ${SCRIPT_DIR}/0_demultiplexer.sh --run_dir $RUN_DIR --sample_sheet $SAMPLE_SHEET --fastq_dir $FASTQ_DIR \
         --pipeline_status $PIPELINE_STATUS\n" >> $PIPELINE_STATUS
-    DEPENDENCIES+=( $(sbatch --parsable -e ${STD_ERR_OUT_DIR}/%A_%x.err -o ${STD_ERR_OUT_DIR}/%A_%x.out \
+    DEPENDENCY=$(sbatch --parsable -e ${STD_ERR_OUT_DIR}/%A_%x.err -o ${STD_ERR_OUT_DIR}/%A_%x.out \
         ${SCRIPT_DIR}/0_demultiplexer.sh --run_dir $RUN_DIR --sample_sheet $SAMPLE_SHEET --fastq_dir $FASTQ_DIR \
-        --pipeline_status $PIPELINE_STATUS) )
-    echo -e "\nsbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
+        --pipeline_status $PIPELINE_STATUS)
+    echo -e "\nsbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
         -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
         ${PIPELINE_DIR}/submit_all.sh --step1 ${OPTIONS[@]}\n" >> $PIPELINE_STATUS
-    sbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
+    DEPENDER=$(sbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
         -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
-        ${PIPELINE_DIR}/submit_all.sh --step1 ${OPTIONS[@]}
+        ${PIPELINE_DIR}/submit_all.sh --step1 ${OPTIONS[@]})
+    echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
 elif ([ $STEP -eq 0 ] && [ -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]) || ([ $STEP -eq 1 ] && [ $ONLY_IDENTIFY -eq 0 ]); then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
         echo -e "Number of samples: ${#SAMPLE_ARRAY[@]}\nSamples: ${SAMPLE_ARRAY[@]}\n" >> $PIPELINE_STATUS
@@ -397,27 +399,29 @@ elif ([ $STEP -eq 0 ] && [ -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]) || ([ $STE
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
         $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $TOOLS_DIR \
         $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
-    DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
+    DEPENDENCY=$(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
         $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $TOOLS_DIR \
-        $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING) )
+        $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING)
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nIncrement: $TEMP_ARRAY_INCREMENT\nNew start: $TEMP_ARRAY_START" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#SAMPLE_ARRAY[@]} ]; then
-        echo -e "\nsbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
+        echo -e "\nsbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step1 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}\n"  >> $PIPELINE_STATUS
-        sbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
+        sbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step1 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}
+        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
     else
-        echo -e "\nsbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
+        echo -e "\nsbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 ${OPTIONS[@]}\n"  >> $PIPELINE_STATUS
-        sbatch --dependency=afterok:${DEPENDENCIES[0]} -J $PROJECT \
+        sbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 ${OPTIONS[@]}
+        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
     fi
 elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
@@ -498,28 +502,30 @@ if ([ $STEP -eq 0 ] && [ $ONLY_IDENTIFY -eq 1 ]) || [ $STEP -eq 2 ]; then
         $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $TOOLS_DIR $IDENTIFY $KRAKEN_DB_TYPES \
         $KRAKEN_DB_DIR_PREFIX $MIN_KRAKEN_READS $SUBSPECIES $BLAST_CONTIGS $BLAST_DB_TYPES \
         $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
-    DEPENDENCIES+=( $(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
+    DEPENDENCY=$(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
         $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $TOOLS_DIR $IDENTIFY $KRAKEN_DB_TYPES \
         $KRAKEN_DB_DIR_PREFIX $MIN_KRAKEN_READS $SUBSPECIES $BLAST_CONTIGS $BLAST_DB_TYPES \
-        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING) )
+        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING)
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#FASTQ_ARRAY[@]} ]; then
-        echo -e "\nsbatch --dependency=afterany:$( IFS=$':'; echo "${DEPENDENCIES[*]}" ) -J $IDENTIFY \
+        echo -e "\nsbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}\n" >> $PIPELINE_STATUS
-        sbatch --dependency=afterany:$( IFS=$':'; echo "${DEPENDENCIES[*]}" ) -J $IDENTIFY \
+        sbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}
+        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
     else
-        echo -e "\nsbatch --dependency=afterany:$( IFS=$':'; echo "${DEPENDENCIES[*]}" ) -J $IDENTIFY \
+        echo -e "\nsbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step3 ${OPTIONS[@]}\n" >> $PIPELINE_STATUS
-        sbatch --dependency=afterany:$( IFS=$':'; echo "${DEPENDENCIES[*]}" ) -J $IDENTIFY \
+        sbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step3 ${OPTIONS[@]}
+        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
     fi
 elif [ $STEP -eq 3 ]; then
     KRAKEN_DB_TYPE_ARRAY=( $(echo $KRAKEN_DB_TYPES | sed 's/-/ /g') )

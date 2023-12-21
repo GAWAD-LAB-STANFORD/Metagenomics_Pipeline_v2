@@ -431,10 +431,11 @@ elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
                 echo "Sample number $SAMPLE_COUNT - ${SAMPLE}_ref_filtered.bam not found. Exiting with code 1" >> $PIPELINE_STATUS
                 echo "END: $(date)" >> $PIPELINE_STATUS
                 exit 1
+            else
+                rm ${STD_ERR_OUT_DIR}/*_${SAMPLE_COUNT}_1_process_fastqs.out ${STD_ERR_OUT_DIR}/*_${SAMPLE_COUNT}_1_process_fastqs.err
             fi
             SAMPLE_COUNT=$((SAMPLE_COUNT+1))
         done
-        # rm ${STD_ERR_OUT_DIR}/*1_process_fastqs.out ${STD_ERR_OUT_DIR}/*1_process_fastqs.err
         echo "### Processing fastq samples ### - END: $(date)" >> $PIPELINE_STATUS
 
 
@@ -537,6 +538,8 @@ elif [ $STEP -eq 3 ]; then
             echo -e "\tSample number $SAMPLE_COUNT - ${SAMPLE}.${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv file not found" >> $PIPELINE_STATUS
         elif [ $NUM_TEMP_FILES -gt 0 ]; then
             echo -e "\tSample number $SAMPLE_COUNT - $NUM_TEMP_FILES temporary files found, job did not finish" >> $PIPELINE_STATUS
+        else
+            rm ${STD_ERR_OUT_DIR}/*_${SAMPLE_COUNT}_2_process_sample.out ${STD_ERR_OUT_DIR}/*_${SAMPLE_COUNT}_2_process_sample.err
         fi
         SAMPLE_COUNT=$((SAMPLE_COUNT+1))
     done
@@ -548,7 +551,6 @@ elif [ $STEP -eq 3 ]; then
         exit 1
     else
         echo "$RESULTS_COUNT results out of a possible $MAX_RESULTS maximum" >> $PIPELINE_STATUS
-        # rm ${STD_ERR_OUT_DIR}/*2_process_sample.out ${STD_ERR_OUT_DIR}/*2_process_sample.err
     fi
     echo "### Processing ref filtered samples ### - END: $(date)" >> $PIPELINE_STATUS
     

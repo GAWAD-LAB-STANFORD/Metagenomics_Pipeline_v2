@@ -174,19 +174,14 @@ fi
 if [ -z $STD_ERR_OUT_DIR ]; then
     STD_ERR_OUT_DIR="${RESULTS_DIR}/std_err_out_files"
 fi
+
 # Make directories if they don't exist
-if [ ! -d $FASTQ_DIR ]; then
-    mkdir $FASTQ_DIR
-fi
-if [ ! -d $RESULTS_DIR ]; then
-    mkdir $RESULTS_DIR
-fi
-if [ ! -d $SCRATCH_DIR ]; then
-    mkdir $SCRATCH_DIR
-fi
-if [ ! -d $STD_ERR_OUT_DIR ]; then
-    mkdir $STD_ERR_OUT_DIR
-fi
+mkdir -p $FASTQ_DIR
+mkdir -p $RESULTS_DIR
+mkdir -p $SCRATCH_DIR
+mkdir -p $STD_ERR_OUT_DIR
+
+# Add parameters/arguments to OPTIONS variable to retain them with each subsequent pipeline resubmission
 OPTIONS=( "-f $FASTQ_DIR -r $RESULTS_DIR -d $PIPELINE_DIR -p $PROJECT -s $SCRATCH_DIR --err_out_dir $STD_ERR_OUT_DIR " )
 if [ ! -z $FASTQ_DIR ]; then
     OPTIONS+=( "-f $FASTQ_DIR" )
@@ -263,7 +258,7 @@ if [ $ALIGN_MINIMUM -ne 90 ]; then
     OPTIONS+=( "--align_min $ALIGN_MINIMUM" )
 fi
 
-
+# On first run, stdout all options from OPTIONS variable for pipeline resubmission parameters/arguments
 TEMP_PIPELINE_DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [ $ONLY_IDENTIFY -eq 1 ]; then
     PIPELINE_STATUS=${STD_ERR_OUT_DIR}/${IDENTIFY}_pipeline_status.txt
@@ -272,65 +267,8 @@ else
 fi
 cd $SCRATCH_DIR
 if [ "$TEMP_PIPELINE_DIR" = "$PIPELINE_DIR" ]; then
-    echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_COMMAND\n\nProject: $PROJECT\nResults dir: $RESULTS_DIR\nFastq dir: $FASTQ_DIR\nScratch dir: $SCRATCH_DIR\nErr out dir: $STD_ERR_OUT_DIR" >> $PIPELINE_STATUS
-    # Optional variable definitions
-    if [ $SKIP_SCRATCH -eq 0 ]; then
-        echo "Default: Scratch dir is different from Results dir" >> $PIPELINE_STATUS
-    else
-        echo "Option: Scratch dir is the same as Results dir" >> $PIPELINE_STATUS
-    fi
-    if [ $SKIP_IDENTIFY -eq 1 ]; then
-        echo "Option: Skip identification of data - will only process the fastqs and skip BAM processing" >> $PIPELINE_STATUS
-    fi
-    if [ $ONLY_IDENTIFY -eq 1 ]; then
-        echo "Option: Only identification of data - will only process already constructed BAMs" >> $PIPELINE_STATUS
-    fi
-    if [ "$IDENTIFY" != "$PROJECT" ]; then
-        echo "Option: Identify different from Project: $IDENTIFY" >> $PIPELINE_STATUS
-    fi
-    if [ $SKIP_TRIMMOMATIC -eq 1 ]; then
-        echo "Option: Skip trimming - will not run trimmomatic" >> $PIPELINE_STATUS
-    fi
-    if [ $RNA -eq 1 ]; then
-        echo "Option: Expecting RNA input and will align using STAR instead of BWA" >> $PIPELINE_STATUS
-    fi
-    if [ $FILTER_RHESUS -eq 1 ]; then
-        echo "Option: Filter rhesus - will remove reads that align to macaca mulatta rhesus monkey" >> $PIPELINE_STATUS
-    fi
-    if [ "$KRAKEN_DB_TYPES" = "microbial" ]; then
-        echo "Default: Kraken db types: microbial" >> $PIPELINE_STATUS
-    else
-        echo "Option: Kraken db types: $KRAKEN_DB_TYPES" >> $PIPELINE_STATUS
-    fi
-    if [ "$MIN_KRAKEN_READS" = "10" ]; then
-        echo "Default: Minimum kraken reads: 10" >> $PIPELINE_STATUS
-    else
-        echo "Option: Minimum kraken reads: $MIN_KRAKEN_READS" >> $PIPELINE_STATUS
-    fi
-    if [ $SUBSPECIES -eq 1 ]; then
-        echo "Option: Subspecies - will include subspecies (kraken S1) in analysis" >> $PIPELINE_STATUS
-    fi
-    if [ $BLAST_CONTIGS -eq 1 ]; then
-        echo "Default: Blast contigs - will make contigs to blast from reads" >> $PIPELINE_STATUS
-    else
-        echo "Option: Blast all - will skip making contigs and blast all reads instead" >> $PIPELINE_STATUS
-    fi
-    if [ "$BLAST_DB_TYPES" = "nt" ]; then
-        echo "Default: Blast db types: nt" >> $PIPELINE_STATUS
-    else
-        echo "Option: Blast db types: $BLAST_DB_TYPES" >> $PIPELINE_STATUS
-    fi
-    if [ $NUM_ALIGNMENTS -eq 250 ]; then
-        echo "Default: Num alignments: 250" >> $PIPELINE_STATUS
-    else
-        echo "Option: Num alignments: $NUM_ALIGNMENTS" >> $PIPELINE_STATUS
-    fi
-    if [ $ALIGN_MINIMUM -eq 90 ]; then
-        echo "Default: Align minimum: 90" >> $PIPELINE_STATUS
-    else
-        echo "Option: Align minimum: $ALIGN_MINIMUM" >> $PIPELINE_STATUS
-    fi
-    echo " " >> $PIPELINE_STATUS
+    echo -e "\nSTART: $(date)\nMetagenomics Pipeline v2\n\n$PIPELINE_DIR/submit_all.sh $PIPELINE_COMMAND\n\nProject: $PROJECT\nResults dir: $RESULTS_DIR\nFastq dir: $FASTQ_DIR\nScratch dir: $SCRATCH_DIR\nErr out dir: $STD_ERR_OUT_DIR" >> $PIPELINE_STATUS
+    echo -e "\nOPTIONS variable holding parameters/arguments for pipeline resubmission: ${OPTIONS[@]}\n" >> $PIPELINE_STATUS
 fi
 
 
@@ -407,22 +345,21 @@ elif ([ $STEP -eq 0 ] && [ -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]) || ([ $STE
     echo -e "$(date)\nIncrement: $TEMP_ARRAY_INCREMENT\nNew start: $TEMP_ARRAY_START" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#SAMPLE_ARRAY[@]} ]; then
-        echo -e "\nsbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
+        echo -e "\nsbatch --parsable --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step1 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}\n"  >> $PIPELINE_STATUS
-        sbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
+        DEPENDER=$(sbatch --parsable --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
-            ${PIPELINE_DIR}/submit_all.sh --step1 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}
-        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
+            ${PIPELINE_DIR}/submit_all.sh --step1 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]})
     else
-        echo -e "\nsbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
+        echo -e "\nsbatch --parsable --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 ${OPTIONS[@]}\n"  >> $PIPELINE_STATUS
-        sbatch --dependency=afterok:$DEPENDENCY -J $PROJECT \
+        DEPENDER=$(sbatch --parsable --dependency=afterok:$DEPENDENCY -J $PROJECT \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
-            ${PIPELINE_DIR}/submit_all.sh --step2 ${OPTIONS[@]}
-        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
+            ${PIPELINE_DIR}/submit_all.sh --step2 ${OPTIONS[@]})
     fi
+    echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
 elif [ $STEP -eq 2 ] && [ $ONLY_IDENTIFY -eq 0 ]; then
     if [ $TEMP_ARRAY_START -eq 0 ]; then
         SAMPLE_COUNT=1
@@ -512,22 +449,21 @@ if ([ $STEP -eq 0 ] && [ $ONLY_IDENTIFY -eq 1 ]) || [ $STEP -eq 2 ]; then
     echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     
     if [ $TEMP_ARRAY_START -le ${#FASTQ_ARRAY[@]} ]; then
-        echo -e "\nsbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
+        echo -e "\nsbatch --parsable --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step2 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}\n" >> $PIPELINE_STATUS
-        sbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
+        DEPENDER=$(sbatch --parsable --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
-            ${PIPELINE_DIR}/submit_all.sh --step2 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]}
-        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
+            ${PIPELINE_DIR}/submit_all.sh --step2 --temp_array_start $TEMP_ARRAY_START ${OPTIONS[@]})
     else
-        echo -e "\nsbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
+        echo -e "\nsbatch --parsable --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
             ${PIPELINE_DIR}/submit_all.sh --step3 ${OPTIONS[@]}\n" >> $PIPELINE_STATUS
-        sbatch --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
+        DEPENDER=$(sbatch --parsable --dependency=afterany:$DEPENDENCY -J $IDENTIFY \
             -e ${STD_ERR_OUT_DIR}/%A_submit_all_%x.err -o ${STD_ERR_OUT_DIR}/%A_submit_all_%x.out \
-            ${PIPELINE_DIR}/submit_all.sh --step3 ${OPTIONS[@]}
-        echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
+            ${PIPELINE_DIR}/submit_all.sh --step3 ${OPTIONS[@]})
     fi
+    echo -e "Dependency job array number: $DEPENDENCY\nDepender job number: $DEPENDER" >> $PIPELINE_STATUS
 elif [ $STEP -eq 3 ]; then
     KRAKEN_DB_TYPE_ARRAY=( $(echo $KRAKEN_DB_TYPES | sed 's/-/ /g') )
     SAMPLE_COUNT=1

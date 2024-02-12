@@ -7,6 +7,7 @@
 #SBATCH --partition=cgawad
 
 START_TIME=$(date +%s)
+SCRIPT_COMMAND="$@"
 while [ "$1" != "" ]; do
     case $1 in
         --run_dir )             shift
@@ -25,7 +26,12 @@ while [ "$1" != "" ]; do
     shift
 done
 
-echo -e "START: $(date)\nMetagenomics pipeline\nRun dir: $RUN_DIR\nSample sheet: $SAMPLE_SHEET\nFastq dir: $FASTQ_DIR"
+if [ -z $RUN_DIR ] || [ -z $SAMPLE_SHEET ] || [ -z $FASTQ_DIR ] || [ -z $PIPELINE_STATUS ]; then
+    echo "Variables not supplied correctly. Use -h/--help options for assistance. Ending program..."
+    exit 1
+fi
+
+echo -e "START: $(date)\nMetagenomics Pipeline v2\nScript command: $SCRIPT_COMMAND"
 
 ml biology bcl2fastq
 bcl2fastq --runfolder-dir $RUN_DIR --sample-sheet $SAMPLE_SHEET --output-dir $FASTQ_DIR

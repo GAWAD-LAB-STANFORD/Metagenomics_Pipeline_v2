@@ -7,26 +7,75 @@
 #SBATCH --partition=cgawad
 
 START_TIME=$(date +%s)
-SCRATCH_DIR=$1
-FASTQ_DIR=$2
-R1_SUFFIX=$3
-R2_SUFFIX=$4
-TOOLS_DIR=$5
-IDENTIFY=$6
-KRAKEN_DB_TYPE_ARRAY=( $(echo $7 | sed 's/-/ /g') )
-KRAKEN_DB_DIR_PREFIX=$8
-MIN_KRAKEN_READS=$9
-SUBSPECIES=${10}
-BLAST_CONTIGS=${11}
-BLAST_DB_TYPE_ARRAY=( $(echo ${12} | sed 's/-/ /g') )
-NCBI_DB_DIR_PREFIX=${13}
-NUM_ALIGNMENTS=${14}
-SCRIPT_DIR=${15}
-ALIGN_MINIMUM=${16}
-SAMPLE_ARRAY=( $(echo ${17} | sed 's/:/ /g') )
-SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
+SCRIPT_COMMAND="$@"
+while [ "$1" != "" ]; do
+    case $1 in
+        --scratch_dir )             shift
+                                    SCRATCH_DIR=$1
+                                    ;;
+        --fastq_dir )               shift
+                                    FASTQ_DIR=$1
+                                    ;;
+        --R1_suffix )               shift
+                                    R1_SUFFIX=$1
+                                    ;;
+        --R2_suffix )               shift
+                                    R2_SUFFIX=$1
+                                    ;;
+        --tools_dir )               shift
+                                    TOOLS_DIR=$1
+                                    ;;
+        --identify )                shift
+                                    IDENTIFY=$1
+                                    ;;
+        --kraken_db_types_string )  shift
+                                    KRAKEN_DB_TYPES_ARRAY=( $(echo $1 | sed 's/-/ /g') )
+                                    ;;
+        --kraken_db_dir_prefix )    shift
+                                    KRAKEN_DB_DIR_PREFIX=$1
+                                    ;;
+        --min_kraken_reads )        shift
+                                    MIN_KRAKEN_READS=$1
+                                    ;;
+        --subspecies )              shift
+                                    SUBSPECIES=$1
+                                    ;;
+        --blast_contigs )           shift
+                                    BLAST_CONTIGS=$1
+                                    ;;
+        --blast_db_types_string )   shift
+                                    BLAST_DB_TYPES_ARRAY=( $(echo $1 | sed 's/-/ /g') )
+                                    ;;
+        --ncbi_db_dir_prefix )      shift
+                                    NCBI_DB_DIR_PREFIX=$1
+                                    ;;
+        --num_alignments )          shift
+                                    NUM_ALIGNMENTS=$1
+                                    ;;
+        --script_dir )              shift
+                                    SCRIPT_DIR=$1
+                                    ;;
+        --align_minimum )           shift
+                                    ALIGN_MINIMUM=$1
+                                    ;;
+        --sample_string )           shift
+                                    SAMPLE_ARRAY=( $(echo $1 | sed 's/:/ /g') )
+                                    ;;
+    esac
+    shift
+done
 
-echo -e "START: $(date)\nMetagenomics pipeline v2\nScratch dir: $SCRATCH_DIR\nSample: $SAMPLE"
+if [ -z $SCRATCH_DIR ] || [ -z $FASTQ_DIR ] || [ -z $R1_SUFFIX ] || [ -z $R2_SUFFIX ] || \
+    [ -z $TOOLS_DIR ] || [ -z $IDENTIFY ] || [ -z $KRAKEN_DB_TYPES_ARRAY ] || [ -z $KRAKEN_DB_DIR_PREFIX ] || \
+    [ -z $MIN_KRAKEN_READS ] || [ -z $SUBSPECIES ] || [ -z $BLAST_CONTIGS ] || [ -z $BLAST_DB_TYPES_ARRAY ] || \
+    [ -z $NCBI_DB_DIR_PREFIX ] || [ -z $NUM_ALIGNMENTS ] || [ -z $SCRIPT_DIR ] || [ -z $ALIGN_MINIMUM ] || \
+    [ -z $SAMPLE_ARRAY ]; then
+    echo "Variables not supplied correctly. Check script for intake parameters. All are required to be specified. Exiting with code 1"
+    exit 1
+fi
+
+SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
+echo -e "START: $(date)\nMetagenomics Pipeline v2\nScript command: $SCRIPT_COMMAND\nSample: $SAMPLE"
 cd $SCRATCH_DIR
 
 ml java perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36
@@ -99,8 +148,8 @@ if [ $BLAST_CONTIGS -eq 1 ]; then
     echo -e "sample\tkraken_db\tspecies_id\tscaffold" > ${SAMPLE}_scaffold_data.tsv
 fi
 COUNT_KRAKEN_DB_TYPE=1
-NUM_KRAKEN_DB_TYPES=${#KRAKEN_DB_TYPE_ARRAY[@]}
-for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
+NUM_KRAKEN_DB_TYPES=${#KRAKEN_DB_TYPES_ARRAY[@]}
+for DB_TYPE in ${KRAKEN_DB_TYPES_ARRAY[@]}; do
     echo "$COUNT_KRAKEN_DB_TYPE of $NUM_KRAKEN_DB_TYPES Kraken DB types - Type: $DB_TYPE - START: $(date)"
     echo -e "\t### Identifying matches between unaligned reads and kraken2 $DB_TYPE database ### - START: $(date)"
     kraken2 --db ${KRAKEN_DB_DIR_PREFIX}${DB_TYPE} --threads 2 --paired --gzip-compressed \
@@ -239,8 +288,8 @@ for DB_TYPE in ${KRAKEN_DB_TYPE_ARRAY[@]}; do
         fi
         
         COUNT_BLAST_DB_TYPE=1
-        NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPE_ARRAY[@]}
-        for BLAST_DB_TYPE in ${BLAST_DB_TYPE_ARRAY[@]}; do
+        NUM_BLAST_DB_TYPES=${#BLAST_DB_TYPES_ARRAY[@]}
+        for BLAST_DB_TYPE in ${BLAST_DB_TYPES_ARRAY[@]}; do
             echo -e "\t\t$COUNT_BLAST_DB_TYPE of $NUM_BLAST_DB_TYPES BLAST DB types - Blast DB type: $BLAST_DB_TYPE - START: $(date)"
             if [ $BLAST_CONTIGS -eq 1 ]; then
                 blast_function $BLAST_DB_TYPE temp_${SAMPLE}_${DB_TYPE}_kraken_${SPECIES_ID}_contigs.fasta $DB_TYPE $SPECIES_ID
@@ -327,8 +376,8 @@ if [ $BLAST_CONTIGS -eq 1 ]; then
 fi
 
 
-if [ ! -f ${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv ]; then
-    echo "Final file ${SAMPLE}_${KRAKEN_DB_TYPE_ARRAY[0]}_kraken_report.tsv not found. Exiting with code 1"
+if [ ! -f ${SAMPLE}_${KRAKEN_DB_TYPES_ARRAY[0]}_kraken_report.tsv ]; then
+    echo "Final file ${SAMPLE}_${KRAKEN_DB_TYPES_ARRAY[0]}_kraken_report.tsv not found. Exiting with code 1"
     exit 1
 fi
 echo -e "END: $(date)\nRuntime: $(($(date +%s)-$START_TIME)) seconds"

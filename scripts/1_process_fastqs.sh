@@ -7,19 +7,52 @@
 #SBATCH --partition=cgawad
 
 START_TIME=$(date +%s)
-FASTQ_DIR=$1
-SCRATCH_DIR=$2
-R1_SUFFIX=$3
-R2_SUFFIX=$4
-SKIP_TRIMMOMATIC=$5
-TOOLS_DIR=$6
-RNA=$7
-REF_FASTA_ARRAY=( $(echo $8 | sed 's/:/ /g') )
-REF_NAME_ARRAY=( $(echo $9 | sed 's/:/ /g') )
-SAMPLE_ARRAY=( $(echo ${10} | sed 's/:/ /g') )
-SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
+SCRIPT_COMMAND="$@"
+while [ "$1" != "" ]; do
+    case $1 in
+        --fastq_dir )               shift
+                                    FASTQ_DIR=$1
+                                    ;;
+        --scratch_dir )             shift
+                                    SCRATCH_DIR=$1
+                                    ;;
+        --R1_suffix )               shift
+                                    R1_SUFFIX=$1
+                                    ;;
+        --R2_suffix )               shift
+                                    R2_SUFFIX=$1
+                                    ;;
+        --skip_trimmomatic )        shift
+                                    SKIP_TRIMMOMATIC=$1
+                                    ;;
+        --rna )                     shift
+                                    RNA=$1
+                                    ;;
+        --ref_fasta_string )        shift
+                                    REF_FASTA_ARRAY=( $(echo $1 | sed 's/:/ /g') )
+                                    ;;
+        --ref_name_string )         shift
+                                    REF_NAME_ARRAY=( $(echo $1 | sed 's/:/ /g') )
+                                    ;;
+        --tools_dir )               shift
+                                    TOOLS_DIR=$1
+                                    ;;
+        --sample_string )           shift
+                                    SAMPLE_ARRAY=( $(echo $1 | sed 's/:/ /g') )
+                                    ;;
+    esac
+    shift
+done
 
-echo -e "START: $(date)\nMetagenomics pipeline v2\nFastq dir: $FASTQ_DIR\nScratch dir: $SCRATCH_DIR\nSample: $SAMPLE"
+if [ -z $FASTQ_DIR ] || [ -z $SCRATCH_DIR ] || [ -z $R1_SUFFIX ] || [ -z $R2_SUFFIX ] || \
+    [ -z $SKIP_TRIMMOMATIC ] || [ -z $RNA ] || [ -z $REF_FASTA_ARRAY ] || [ -z $REF_NAME_ARRAY ] || \
+    [ -z $TOOLS_DIR ] || [ -z $SAMPLE_ARRAY ]; then
+    echo "Variables not supplied correctly. Check script for intake parameters. All are required to be specified. Exiting with code 1"
+    exit 1
+fi
+
+SAMPLE=${SAMPLE_ARRAY[$(( $SLURM_ARRAY_TASK_ID - 1 ))]}
+echo -e "START: $(date)\nMetagenomics Pipeline v2\nScript command: $SCRIPT_COMMAND\nSample: $SAMPLE"
 cd $SCRATCH_DIR
 
 ml java/11.0.11 perl R/4.2.0 python/3.6.1 py-pandas/0.23.0_py36 py-numpy/1.14.3_py36

@@ -338,12 +338,16 @@ elif ([ $STEP -eq 0 ] && [ -z $RUN_DIR ] && [ $ONLY_IDENTIFY -eq 0 ]) || ([ $STE
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $TOOLS_DIR \
-        $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
+        --fastq_dir $FASTQ_DIR --scratch_dir $SCRATCH_DIR --R1_suffix $R1_SUFFIX --R2_suffix $R2_SUFFIX \
+        --skip_trimmomatic $SKIP_TRIMMOMATIC --tools_dir $TOOLS_DIR --rna $RNA \
+        --ref_fasta_string $REF_FASTA_STRING --ref_name_string $REF_NAME_STRING \
+        --sample_string $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCY=$(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/1_process_fastqs.sh \
-        $FASTQ_DIR $SCRATCH_DIR $R1_SUFFIX $R2_SUFFIX $SKIP_TRIMMOMATIC $TOOLS_DIR \
-        $RNA $REF_FASTA_STRING $REF_NAME_STRING $TEMP_SAMPLES_STRING)
+        --fastq_dir $FASTQ_DIR --scratch_dir $SCRATCH_DIR --R1_suffix $R1_SUFFIX --R2_suffix $R2_SUFFIX \
+        --skip_trimmomatic $SKIP_TRIMMOMATIC --tools_dir $TOOLS_DIR --rna $RNA \
+        --ref_fasta_string $REF_FASTA_STRING --ref_name_string $REF_NAME_STRING \
+        --sample_string $TEMP_SAMPLES_STRING)
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nIncrement: $TEMP_ARRAY_INCREMENT\nNew start: $TEMP_ARRAY_START" >> $PIPELINE_STATUS
     
@@ -440,14 +444,20 @@ if ([ $STEP -eq 0 ] && [ $ONLY_IDENTIFY -eq 1 ]) || [ $STEP -eq 2 ]; then
     TEMP_SAMPLES_STRING=$( IFS=$':'; echo "${TEMP_SAMPLE_ARRAY[*]}" )
     echo -e "\nsbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
-        $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $TOOLS_DIR $IDENTIFY $KRAKEN_DB_TYPES \
-        $KRAKEN_DB_DIR_PREFIX $MIN_KRAKEN_READS $SUBSPECIES $BLAST_CONTIGS $BLAST_DB_TYPES \
-        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
+        --scratch_dir $SCRATCH_DIR --fastq_dir $FASTQ_DIR --R1_suffix $R1_SUFFIX --R2_suffix $R2_SUFFIX \
+        --tools_dir $TOOLS_DIR --identify $IDENTIFY --kraken_db_types_string $KRAKEN_DB_TYPES \
+        --kraken_db_dir_prefix $KRAKEN_DB_DIR_PREFIX --min_kraken_reads $MIN_KRAKEN_READS \
+        --subspecies $SUBSPECIES --blast_contigs $BLAST_CONTIGS --blast_db_types_string $BLAST_DB_TYPES \
+        --ncbi_db_dir_prefix $NCBI_DB_DIR_PREFIX --num_alignments $NUM_ALIGNMENTS --script_dir $SCRIPT_DIR \
+        --align_minimum $ALIGN_MINIMUM --sample_string $TEMP_SAMPLES_STRING\n" >> $PIPELINE_STATUS
     DEPENDENCY=$(sbatch --parsable -e $STD_ERR_OUT_DIR/%A_%a_%x.err -o $STD_ERR_OUT_DIR/%A_%a_%x.out \
         --array=1-${TEMP_JOB_COUNT} ${SCRIPT_DIR}/2_process_sample.sh \
-        $SCRATCH_DIR $FASTQ_DIR $R1_SUFFIX $R2_SUFFIX $TOOLS_DIR $IDENTIFY $KRAKEN_DB_TYPES \
-        $KRAKEN_DB_DIR_PREFIX $MIN_KRAKEN_READS $SUBSPECIES $BLAST_CONTIGS $BLAST_DB_TYPES \
-        $NCBI_DB_DIR_PREFIX $NUM_ALIGNMENTS $SCRIPT_DIR $ALIGN_MINIMUM $TEMP_SAMPLES_STRING)
+        --scratch_dir $SCRATCH_DIR --fastq_dir $FASTQ_DIR --R1_suffix $R1_SUFFIX --R2_suffix $R2_SUFFIX \
+        --tools_dir $TOOLS_DIR --identify $IDENTIFY --kraken_db_types_string $KRAKEN_DB_TYPES \
+        --kraken_db_dir_prefix $KRAKEN_DB_DIR_PREFIX --min_kraken_reads $MIN_KRAKEN_READS \
+        --subspecies $SUBSPECIES --blast_contigs $BLAST_CONTIGS --blast_db_types_string $BLAST_DB_TYPES \
+        --ncbi_db_dir_prefix $NCBI_DB_DIR_PREFIX --num_alignments $NUM_ALIGNMENTS --script_dir $SCRIPT_DIR \
+        --align_minimum $ALIGN_MINIMUM --sample_string $TEMP_SAMPLES_STRING)
     TEMP_ARRAY_START=$(($TEMP_ARRAY_START + $TEMP_ARRAY_INCREMENT))
     echo -e "$(date)\nNew start: $TEMP_ARRAY_START\nIncrement: $TEMP_ARRAY_INCREMENT" >> $PIPELINE_STATUS
     

@@ -27,7 +27,7 @@ while [ "$1" != "" ]; do
 done
 
 if [ -z $RUN_DIR ] || [ -z $SAMPLE_SHEET ] || [ -z $FASTQ_DIR ] || [ -z $PIPELINE_STATUS ]; then
-    echo "Variables not supplied correctly. Use -h/--help options for assistance. Ending program..."
+    echo "Variables not supplied correctly. Check script for intake parameters. All are required to be specified. Exiting with code 1"
     exit 1
 fi
 
